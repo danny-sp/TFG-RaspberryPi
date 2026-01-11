@@ -1,0 +1,11 @@
+[project]
+name = "tfg-raspberrypi"
+version = "0.1.0"
+description = "Raspberry Pi Program Client"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "customtkinter>=5.2.2",
+    "paho-mqtt>=2.1.0",
+    "tkintermapview>=1.29",
+]
