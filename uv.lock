@@ -162,6 +162,12 @@ wheels = [
 ]
 
 [[package]]
+name = "gpsd-py3"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/62/1e/8ffc5bbbbea1a4501e59280b6f8127d4a54c20888dfa9ffdd7d08a06991a/gpsd-py3-0.3.0.tar.gz", hash = "sha256:2908d3bd78dfb6720ecfe22f97e139b5a4a198f38df3a77215cf644a33513192", size = 4103, upload-time = "2017-10-14T20:42:14.647Z" }
+
+[[package]]
 name = "idna"
 version = "3.11"
 source = { registry = "https://pypi.org/simple" }
@@ -345,6 +351,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "customtkinter" },
+    { name = "gpsd-py3" },
     { name = "paho-mqtt" },
     { name = "tkintermapview" },
 ]
@@ -352,6 +359,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "customtkinter", specifier = ">=5.2.2" },
+    { name = "gpsd-py3", specifier = ">=0.3.0" },
     { name = "paho-mqtt", specifier = ">=2.1.0" },
     { name = "tkintermapview", specifier = ">=1.29" },
 ]

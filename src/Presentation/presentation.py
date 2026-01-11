@@ -25,29 +25,36 @@ class AppUI(ctk.CTk):
     def __init__(self, controller):
         super().__init__()
         self.controller = controller
-        
+        self.position = self.controller.get_position()
+
         self.title("TFG - Simulador EV")
         self.geometry("800x480")
         self.attributes("-fullscreen", True)
         self.config(cursor="none")
-        
+
         self.grid_columnconfigure(0, weight=3)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
         self._setup_map()
         self._setup_controls()
+        self._set_car_marker()
 
         self.controller.ui_callback = self.update_interface_safe
+
+    def _set_car_marker(self):
+        self.position = self.controller.get_position()
+        print(f"Current position: {self.position}")
+        self.map_widget.set_marker(self.position[0], self.position[1], text="You")
+        self.map_widget.set_position(self.position[0], self.position[1])
 
     def _setup_map(self):
         self.map_widget = TouchMapView(self, corner_radius=0)
         self.map_widget.grid(row=0, column=0, sticky="nsew")
         self.map_widget.configure(cursor="none")
-        
-        self.map_widget.set_position(39.54505007110555, -4.328554881757664)
+
+        self._set_car_marker()
         self.map_widget.set_zoom(10)
-        self.map_widget.set_marker(39.54505007110555, -4.328554881757664, text="Mi Coche")
 
     def _setup_controls(self):
         self.frame_controls = ctk.CTkFrame(self, corner_radius=0)
@@ -78,6 +85,7 @@ class AppUI(ctk.CTk):
         self._reset_state()
 
         charging_stations = self.controller.get_stations()
+        self._set_car_marker()
 
         # Create a scrollable frame for station buttons
         self.scrollable_frame = ctk.CTkScrollableFrame(
@@ -85,6 +93,7 @@ class AppUI(ctk.CTk):
             corner_radius=0,
             fg_color="transparent"
         )
+
         self.scrollable_frame.pack(fill="both", expand=True)
         btn_cancel = ctk.CTkButton(
             self.scrollable_frame,

@@ -1,7 +1,9 @@
 from src.Domain.chargingStation import chargingStation
+from src.Domain.chargingStation import chargingStation
 
-class ChargeController:
-    def __init__(self):
+class Controller:
+    def __init__(self, gps_client=None):
+        self.gps_client = gps_client
         self.charging_stations = {}
         self.demo_stations()
 
@@ -14,3 +16,11 @@ class ChargeController:
     def get_stations(self):
         return list(self.charging_stations.values())
 
+    def get_position(self):
+        data = self.gps_client.get_data() if self.gps_client else None
+        if data:
+            latitude = data.get('lat', 39.54505007110555)  # Default latitude if not available
+            longitude = data.get('lon', -4.328554881757664)  # Default longitude if not available
+            return (latitude, longitude)
+
+        return (None, None)
