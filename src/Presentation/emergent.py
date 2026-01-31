@@ -5,14 +5,14 @@ class ConfirmationDialog:
     def __init__(self, parent, text, on_confirm=None):
         """
         Create a custom confirmation dialog.
-        
+
         Args:
             parent: The parent window
             text: The text to display in the dialog
             on_confirm: Callback function to call when user clicks "YES"
         """
         self.on_confirm = on_confirm
-        
+
         # Create custom confirmation dialog
         self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("Confirmation")

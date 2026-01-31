@@ -2,7 +2,13 @@ import customtkinter as ctk
 from tkintermapview import TkinterMapView
 import time
 import math
+import os
+import tkinter as tk
+from datetime import datetime
 from .emergent import ConfirmationDialog
+
+MAX_ZOOM_LEVEL = 15
+MIN_ZOOM_LEVEL = 5
 
 class TouchMapView(TkinterMapView):
     def mouse_move(self, event):
@@ -22,10 +28,27 @@ class TouchMapView(TkinterMapView):
             super().mouse_move(event)
 
 class AppUI(ctk.CTk):
-    def __init__(self, controller):
+    def __init__(self, controller, gps_thread):
         super().__init__()
         self.controller = controller
-        self.position = self.controller.get_position()
+        self.gps_thread = gps_thread
+
+        self.car_icon = None
+        self.car_marker = None
+        TARGET_CAR_ICON_SIZE = 50
+
+        if os.path.exists("assets/car.png"):
+            try:
+                img = tk.PhotoImage(file="assets/car.png")
+                w, h = img.width(), img.height()
+                scale = max(1, int(max(w, h) / TARGET_CAR_ICON_SIZE))
+                if scale > 1:
+                    img = img.subsample(scale, scale)
+                self.car_icon = img
+            except Exception as e:
+                print("Failed to load car icon:", e)
+        else:
+            print("Car icon not found at assets/car.png - using default marker")
 
         self.title("TFG - Simulador EV")
         self.geometry("800x480")
@@ -34,31 +57,116 @@ class AppUI(ctk.CTk):
 
         self.grid_columnconfigure(0, weight=3)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=0)
+        self.grid_rowconfigure(1, weight=1)
 
+        self._setup_top_bar()
         self._setup_map()
         self._setup_controls()
         self._set_car_marker()
 
-        self.controller.ui_callback = self.update_interface_safe
+        self._update_clk_gps()
 
-    def _set_car_marker(self):
-        self.position = self.controller.get_position()
-        print(f"Current position: {self.position}")
-        self.map_widget.set_marker(self.position[0], self.position[1], text="You")
-        self.map_widget.set_position(self.position[0], self.position[1])
+
+##############################################################
+##
+## MAIN UI SETUP METHODS: TOP BAR, MAP, CONTROLS
+##
+##############################################################
+
+    def _setup_top_bar(self):
+        self.top_bar = ctk.CTkFrame(self, fg_color="#2a2a2a", height=50, corner_radius=0)
+        self.top_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.top_bar.grid_propagate(False)
+        self.top_bar.configure(cursor="none")
+
+        # Close program button
+        self.btn_close = ctk.CTkButton(
+            self.top_bar,
+            text="X",
+            width=50,
+            height=50,
+            corner_radius=0,
+            font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
+            fg_color="red",
+            hover_color="red",
+            command=self.close_app,
+            cursor="none"
+        )
+        self.btn_close.pack(side="left")
+
+        # GPS status label
+        self.lbl_gps = ctk.CTkLabel(
+            self.top_bar,
+            text="GPS",
+            font=ctk.CTkFont(family="Arial", size=25, weight="bold"),
+            text_color="red"
+        )
+        self.lbl_gps.pack(side="top", pady=0)
+        self.lbl_gps.place(relx=0.5, rely=0.5, anchor="center")
+
+        # Clock label
+        self.lbl_clock = ctk.CTkLabel(
+            self.top_bar,
+            text="",
+            font=ctk.CTkFont(family="Arial", size=25, weight="bold"),
+            text_color="white"
+        )
+        self.lbl_clock.pack(side="right", padx=20)
 
     def _setup_map(self):
-        self.map_widget = TouchMapView(self, corner_radius=0)
-        self.map_widget.grid(row=0, column=0, sticky="nsew")
+        self.map_widget = TouchMapView(self, corner_radius=0, database_path="offline_map.db")
+        self.map_widget.grid(row=1, column=0, sticky="nsew")
         self.map_widget.configure(cursor="none")
 
         self._set_car_marker()
         self.map_widget.set_zoom(10)
 
+        try:
+            if hasattr(self.map_widget, "button_zoom_in"):
+                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_in.canvas_rect, state='hidden')
+                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_in.canvas_text, state='hidden')
+
+            if hasattr(self.map_widget, "button_zoom_out"):
+                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_out.canvas_rect, state='hidden')
+                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_out.canvas_text, state='hidden')
+
+            # Zoom In Button
+            self.btn_zoom_in = ctk.CTkButton(
+                self.map_widget,
+                text="+",
+                width=80,
+                height=80,
+                corner_radius=0,
+                font=ctk.CTkFont(family="Verdana", size=40, weight="bold"),
+                fg_color="gray",
+                hover_color="gray",
+                command=self._map_zoom_in,
+                cursor="none"
+            )
+            self.btn_zoom_in.place(relx=0.03, rely=0.14, anchor="w")
+
+            # Zoom Out Button
+            self.btn_zoom_out = ctk.CTkButton(
+                self.map_widget,
+                text="-",
+                width=80,
+                height=80,
+                corner_radius=0,
+                font=ctk.CTkFont(family="Verdana", size=40, weight="bold"),
+                fg_color="gray",
+                hover_color="gray",
+                command=self._map_zoom_out,
+                cursor="none"
+            )
+            self.btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
+
+        except Exception as e:
+            print("Using default zoom buttons due to error:", e)
+
     def _setup_controls(self):
         self.frame_controls = ctk.CTkFrame(self, corner_radius=0)
-        self.frame_controls.grid(row=0, column=1, sticky="nsew")
+        self.frame_controls.grid(row=1, column=1, sticky="nsew")
         self.frame_controls.configure(cursor="none")
 
         # Stop button - fixed at the top
@@ -70,8 +178,8 @@ class AppUI(ctk.CTk):
             command=self._on_button_click,
             width=200,
             height=50,
-            corner_radius=10,
-            font=ctk.CTkFont(size=20, weight="bold"),
+            corner_radius=0,
+            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
             cursor="none"
         )
         self.btn_action.pack(side="top", pady=20)
@@ -79,6 +187,68 @@ class AppUI(ctk.CTk):
         # Container for dynamic content
         self.content_container = ctk.CTkFrame(self.frame_controls, fg_color="transparent")
         self.content_container.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+
+##############################################################
+##
+## AUXILIAR METHODS: CLOSE_APP, SET CAR MARKER, RESET_STATE, ZOOM, UPDATE GPS/CLK
+##
+##############################################################
+
+    def close_app(self):
+        """Safely closes the application"""
+        self.gps_thread.stop()
+        self.quit()
+
+    def _set_car_marker(self):
+        self.position = self.controller.get_position()
+        print(f"Current position: {self.position}")
+        if self.car_marker is None:
+            self.car_marker = self.map_widget.set_marker(self.position[0], self.position[1], text=None, icon=self.car_icon, icon_anchor="center")
+        else:
+            self.car_marker.set_position(self.position[0], self.position[1])
+
+        # center the map on the car
+        self.map_widget.set_position(self.position[0], self.position[1])
+
+    def _reset_state(self):
+        self.map_widget.delete_all_marker()
+        self.car_marker = None
+        # recreate car marker (icon if available)
+        self._set_car_marker()
+
+        # Remove old scroller
+        if hasattr(self, 'scrollable_frame') and self.scrollable_frame is not None:
+            try:
+                self.scrollable_frame.pack_forget()
+                self.scrollable_frame.destroy()
+            except:
+                pass
+            self.scrollable_frame = None
+
+    def _map_zoom_in(self):
+        if self.map_widget.zoom < MAX_ZOOM_LEVEL:
+            self.map_widget.set_zoom(self.map_widget.zoom + 1)
+
+    def _map_zoom_out(self):
+        if self.map_widget.zoom > MIN_ZOOM_LEVEL:
+            self.map_widget.set_zoom(self.map_widget.zoom - 1)
+
+    def _update_clk_gps(self):
+        current_time = time.strftime("%H:%M:%S")
+        self.lbl_clock.configure(text=current_time)
+
+        self.after(1000, self._update_clk_gps)
+        if self.controller.get_connected_gps():
+            self.lbl_gps.configure(text="GPS: Connected", text_color="green")
+        else:
+            self.lbl_gps.configure(text="GPS: Disconnected", text_color="red")
+
+
+##############################################################
+##
+## BUTTONs CLICK HANDLERS
+##
+##############################################################
 
     def _on_button_click(self):
         # Remove all markers except the car
@@ -125,18 +295,6 @@ class AppUI(ctk.CTk):
             )
             btn_station.pack(pady=10)
 
-    def _reset_state(self):
-        self.map_widget.delete_all_marker()
-        self.map_widget.set_marker(39.54505007110555, -4.328554881757664, text="You")
-
-        # Remove old scroller
-        if hasattr(self, 'scrollable_frame') and self.scrollable_frame is not None:
-            try:
-                self.scrollable_frame.pack_forget()
-                self.scrollable_frame.destroy()
-            except:
-                pass
-            self.scrollable_frame = None
 
     def _on_station_click(self, station):
         text = f"Are you sure you want to go to the charging station\n'{station.id}'?"
@@ -145,9 +303,3 @@ class AppUI(ctk.CTk):
             text,
             on_confirm=lambda: self.controller.select_station(station)
         )
-
-    def update_interface_safe(self, data):
-        self.after(0, lambda: self._update_widgets(data))
-
-    def _update_widgets(self, data):
-        pass

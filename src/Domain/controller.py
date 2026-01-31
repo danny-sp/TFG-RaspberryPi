@@ -13,14 +13,18 @@ class Controller:
         self.charging_stations[station1.id] = station1
         self.charging_stations[station2.id] = station2
 
-    def get_stations(self):
+    def get_stations(self) -> list[chargingStation]:
         return list(self.charging_stations.values())
 
-    def get_position(self):
+    def get_position(self) -> (float, float):
+        default_pos = (39.54505007110555, -4.328554881757664)  # Default position
         data = self.gps_client.get_data() if self.gps_client else None
         if data:
-            latitude = data.get('lat', 39.54505007110555)  # Default latitude if not available
-            longitude = data.get('lon', -4.328554881757664)  # Default longitude if not available
+            latitude = data.get('lat', default_pos[0])  # Default latitude if not available
+            longitude = data.get('lon', default_pos[1])  # Default longitude if not available
             return (latitude, longitude)
 
-        return (None, None)
+        return default_pos
+
+    def get_connected_gps(self) -> bool:
+        return self.gps_client.get_connected() if self.gps_client else False
