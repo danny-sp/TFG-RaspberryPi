@@ -1,0 +1,15 @@
+{
+    "configurations": [
+        {
+            "name": "Python Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "console": "integratedTerminal",
+            "env": {
+                "DISPLAY": ":0"
+            },
+            "python": "${workspaceFolder}/.venv/bin/python",
+        }
+    ]
+}

@@ -4,8 +4,12 @@ import time
 import math
 import os
 import tkinter as tk
-from datetime import datetime
-from .emergent import ConfirmationDialog
+from geopy.distance import geodesic
+
+from src.Presentation.emergent import ConfirmationDialog
+
+from src.Domain.controller import Controller
+from src.Domain.option import Option
 
 MAX_ZOOM_LEVEL = 15
 MIN_ZOOM_LEVEL = 5
@@ -28,13 +32,13 @@ class TouchMapView(TkinterMapView):
             super().mouse_move(event)
 
 class AppUI(ctk.CTk):
-    def __init__(self, controller, gps_thread):
+    def __init__(self, controller: Controller, gps_thread):
         super().__init__()
         self.controller = controller
         self.gps_thread = gps_thread
+        self.car_marker = None
 
         self.car_icon = None
-        self.car_marker = None
         TARGET_CAR_ICON_SIZE = 50
 
         if os.path.exists("assets/car.png"):
@@ -63,9 +67,12 @@ class AppUI(ctk.CTk):
         self._setup_top_bar()
         self._setup_map()
         self._setup_controls()
-        self._set_car_marker()
 
-        self._update_clk_gps()
+        self.position = self.controller.get_position()
+        self.car_marker = self.map_widget.set_marker(self.position[0], self.position[1], text=None, icon=self.car_icon, icon_anchor="center")
+        self.map_widget.set_position(self.position[0], self.position[1])
+
+        self._update()
 
 
 ##############################################################
@@ -119,7 +126,6 @@ class AppUI(ctk.CTk):
         self.map_widget.grid(row=1, column=0, sticky="nsew")
         self.map_widget.configure(cursor="none")
 
-        self._set_car_marker()
         self.map_widget.set_zoom(10)
 
         try:
@@ -179,7 +185,7 @@ class AppUI(ctk.CTk):
             width=200,
             height=50,
             corner_radius=0,
-            font=ctk.CTkFont(family="Arial", size=20, weight="bold"),
+            font=ctk.CTkFont(family="Arial", size=30),
             cursor="none"
         )
         self.btn_action.pack(side="top", pady=20)
@@ -202,18 +208,10 @@ class AppUI(ctk.CTk):
     def _set_car_marker(self):
         self.position = self.controller.get_position()
         print(f"Current position: {self.position}")
-        if self.car_marker is None:
-            self.car_marker = self.map_widget.set_marker(self.position[0], self.position[1], text=None, icon=self.car_icon, icon_anchor="center")
-        else:
-            self.car_marker.set_position(self.position[0], self.position[1])
-
-        # center the map on the car
-        self.map_widget.set_position(self.position[0], self.position[1])
+        self.car_marker.set_position(self.position[0], self.position[1])
 
     def _reset_state(self):
         self.map_widget.delete_all_marker()
-        self.car_marker = None
-        # recreate car marker (icon if available)
         self._set_car_marker()
 
         # Remove old scroller
@@ -233,15 +231,18 @@ class AppUI(ctk.CTk):
         if self.map_widget.zoom > MIN_ZOOM_LEVEL:
             self.map_widget.set_zoom(self.map_widget.zoom - 1)
 
-    def _update_clk_gps(self):
+    def _update(self):
         current_time = time.strftime("%H:%M:%S")
         self.lbl_clock.configure(text=current_time)
 
-        self.after(1000, self._update_clk_gps)
         if self.controller.get_connected_gps():
             self.lbl_gps.configure(text="GPS: Connected", text_color="green")
         else:
             self.lbl_gps.configure(text="GPS: Disconnected", text_color="red")
+
+        self._set_car_marker()
+
+        self.after(1000, self._update)
 
 
 ##############################################################
@@ -254,7 +255,7 @@ class AppUI(ctk.CTk):
         # Remove all markers except the car
         self._reset_state()
 
-        charging_stations = self.controller.get_stations()
+        options = self.controller.get_stations()
         self._set_car_marker()
 
         # Create a scrollable frame for station buttons
@@ -268,10 +269,10 @@ class AppUI(ctk.CTk):
         btn_cancel = ctk.CTkButton(
             self.scrollable_frame,
             text="Cancel",
-            width=150,
+            width=200,
             height=40,
-            corner_radius=8,
-            font=ctk.CTkFont(size=14),
+            corner_radius=0,
+            font=ctk.CTkFont(family="Arial", size=30),
             cursor="none",
             command=self._reset_state,
             fg_color="red",
@@ -279,27 +280,28 @@ class AppUI(ctk.CTk):
         )
         btn_cancel.pack(pady=10)
 
-        for station in charging_stations:
-            lat, lon = station.get_location()
-            self.map_widget.set_marker(lat, lon, text=station.id)
+        for o in options:
+            lat, lon = o.charging_station.latitude, o.charging_station.longitude
+            self.map_widget.set_marker(lat, lon, text=o.charging_station.name)
+            geodetic_distance = geodesic(self.position, (lat, lon)).kilometers
+            price_text = f"{o.price:.2f}€"
 
             btn_station = ctk.CTkButton(
             self.scrollable_frame,
-            text=station.id,
-            width=150,
-            height=40,
-            corner_radius=8,
-            font=ctk.CTkFont(size=14),
+            text=f"{o.charging_station.name}\n{geodetic_distance:.2f} km{price_text}",
+            width=200,
+            height=80,
+            corner_radius=0,
+            font=ctk.CTkFont(family="Arial", size=30),
             cursor="none",
-            command=lambda s=station: self._on_station_click(s)
+            command=lambda s=o: self._on_option_click(s)
             )
             btn_station.pack(pady=10)
 
 
-    def _on_station_click(self, station):
-        text = f"Are you sure you want to go to the charging station\n'{station.id}'?"
+    def _on_option_click(self, option: Option):
         ConfirmationDialog(
             self,
-            text,
-            on_confirm=lambda: self.controller.select_station(station)
+            option,
+            on_confirm=lambda: self.controller.select_station(option)
         )

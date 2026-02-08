@@ -9,4 +9,5 @@ dependencies = [
     "paho-mqtt>=2.1.0",
     "tkintermapview>=1.29",
     "gpsd-py3>=0.3.0",
+    "geopy>=2.4.1",
 ]

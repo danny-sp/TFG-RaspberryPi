@@ -1,14 +1,14 @@
 import customtkinter as ctk
 
+from src.Domain.option import Option
 
 class ConfirmationDialog:
-    def __init__(self, parent, text, on_confirm=None):
+    def __init__(self, parent, option: Option, on_confirm=None):
         """
         Create a custom confirmation dialog.
 
         Args:
             parent: The parent window
-            text: The text to display in the dialog
             on_confirm: Callback function to call when user clicks "YES"
         """
         self.on_confirm = on_confirm
@@ -37,11 +37,17 @@ class ConfirmationDialog:
         )
         main_frame.pack(fill="both", expand=True)
 
+        services = ""
+        for service in option.charging_station.services:
+            services += service.type + " "
+
+        text = f"{option.charging_station.name} selected!\n{services}"
+        print(text)
         # Message label
         label = ctk.CTkLabel(
             main_frame,
             text=text,
-            font=ctk.CTkFont(size=25),
+            font=ctk.CTkFont(family="Arial", size=40),
             wraplength=450
         )
         label.pack(pady=20)
