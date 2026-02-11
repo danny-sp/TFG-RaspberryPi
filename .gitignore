@@ -2,3 +2,4 @@
 __pycache__/
 *.pyc
 offline_map.db
+logs

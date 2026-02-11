@@ -9,6 +9,7 @@ class ConfirmationDialog:
 
         Args:
             parent: The parent window
+            option: The Option object containing the charging station information
             on_confirm: Callback function to call when user clicks "YES"
         """
         self.on_confirm = on_confirm
@@ -42,7 +43,7 @@ class ConfirmationDialog:
             services += service.type + " "
 
         text = f"{option.charging_station.name} selected!\n{services}"
-        print(text)
+
         # Message label
         label = ctk.CTkLabel(
             main_frame,

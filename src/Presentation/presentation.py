@@ -11,6 +11,8 @@ from src.Presentation.emergent import ConfirmationDialog
 from src.Domain.controller import Controller
 from src.Domain.option import Option
 
+from src.Utils.logger import setup_logger
+
 MAX_ZOOM_LEVEL = 15
 MIN_ZOOM_LEVEL = 5
 
@@ -31,14 +33,17 @@ class TouchMapView(TkinterMapView):
         else:
             super().mouse_move(event)
 
-class AppUI(ctk.CTk):
-    def __init__(self, controller: Controller, gps_thread):
-        super().__init__()
-        self.controller = controller
-        self.gps_thread = gps_thread
-        self.car_marker = None
+class AppUIFrame(ctk.CTkFrame):
+    def __init__(self, parent, controller: Controller, destination: str, gps_thread):
+        super().__init__(parent)
+        self._logger = setup_logger("AppUIFrame")
+        self._logger.info(f"Initializing AppUIFrame with destination: {destination}")
+        self.root = parent
+        self._controller = controller
+        self._destination = destination
+        self._gps_thread = gps_thread
 
-        self.car_icon = None
+        self._car_icon = None
         TARGET_CAR_ICON_SIZE = 50
 
         if os.path.exists("assets/car.png"):
@@ -48,16 +53,11 @@ class AppUI(ctk.CTk):
                 scale = max(1, int(max(w, h) / TARGET_CAR_ICON_SIZE))
                 if scale > 1:
                     img = img.subsample(scale, scale)
-                self.car_icon = img
+                self._car_icon = img
             except Exception as e:
-                print("Failed to load car icon:", e)
+                self._logger.error(f"Failed to load car icon: {e}")
         else:
-            print("Car icon not found at assets/car.png - using default marker")
-
-        self.title("TFG - Simulador EV")
-        self.geometry("800x480")
-        self.attributes("-fullscreen", True)
-        self.config(cursor="none")
+            self._logger.warning("Car icon not found at assets/car.png - using default marker")
 
         self.grid_columnconfigure(0, weight=3)
         self.grid_columnconfigure(1, weight=1)
@@ -68,8 +68,8 @@ class AppUI(ctk.CTk):
         self._setup_map()
         self._setup_controls()
 
-        self.position = self.controller.get_position()
-        self.car_marker = self.map_widget.set_marker(self.position[0], self.position[1], text=None, icon=self.car_icon, icon_anchor="center")
+        self.position = self._controller.get_position()
+        self.car_marker = self.map_widget.set_marker(self.position[0], self.position[1], text=None, icon=self._car_icon, icon_anchor="center")
         self.map_widget.set_position(self.position[0], self.position[1])
 
         self._update()
@@ -168,7 +168,7 @@ class AppUI(ctk.CTk):
             self.btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
 
         except Exception as e:
-            print("Using default zoom buttons due to error:", e)
+            self._logger.warning(f"Using default zoom buttons due to error: {e}")
 
     def _setup_controls(self):
         self.frame_controls = ctk.CTkFrame(self, corner_radius=0)
@@ -202,12 +202,12 @@ class AppUI(ctk.CTk):
 
     def close_app(self):
         """Safely closes the application"""
-        self.gps_thread.stop()
+        self._gps_thread.stop()
         self.quit()
 
     def _set_car_marker(self):
-        self.position = self.controller.get_position()
-        print(f"Current position: {self.position}")
+        self.position = self._controller.get_position()
+        self._logger.debug(f"Current position: {self.position}")
         self.car_marker.set_position(self.position[0], self.position[1])
 
     def _reset_state(self):
@@ -235,7 +235,7 @@ class AppUI(ctk.CTk):
         current_time = time.strftime("%H:%M:%S")
         self.lbl_clock.configure(text=current_time)
 
-        if self.controller.get_connected_gps():
+        if self._controller.get_connected_gps():
             self.lbl_gps.configure(text="GPS: Connected", text_color="green")
         else:
             self.lbl_gps.configure(text="GPS: Disconnected", text_color="red")
@@ -255,7 +255,7 @@ class AppUI(ctk.CTk):
         # Remove all markers except the car
         self._reset_state()
 
-        options = self.controller.get_stations()
+        options = self._controller.get_stations()
         self._set_car_marker()
 
         # Create a scrollable frame for station buttons
@@ -303,5 +303,5 @@ class AppUI(ctk.CTk):
         ConfirmationDialog(
             self,
             option,
-            on_confirm=lambda: self.controller.select_station(option)
+            on_confirm=lambda: self._controller.select_station(option)
         )
