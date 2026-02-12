@@ -8,12 +8,16 @@ from src.Domain.option import Option
 from src.Domain.price_rate import PriceRate
 from src.Domain.service import Service
 
+from src.Persistance.route_client import get_route_geometry
+
 from src.Utils.constants import ServiceType
+from src.Utils.logger import setup_logger
 
 class Controller:
     def __init__(self, gps_client=None):
         self.gps_client = gps_client
         self.charging_stations = {}
+        self._logger = setup_logger("Controller")
 
     def get_stations(self):
         charger_type1 = ChargerType(id=1, name="Type 2", kw_speed=22, description="Standard Type 2 charger")
@@ -68,3 +72,41 @@ class Controller:
 
     def get_connected_gps(self) -> bool:
         return self.gps_client.get_connected() if self.gps_client else False
+
+    def get_route_str(self, destination: str):
+        start_coords = self.get_position()
+
+        if destination == "BILBAO":
+            end_coords = (43.262873, -2.947564)
+        elif destination == "MADRID":
+            end_coords = (40.451843, -3.686502)
+        else: # HUELVA
+            end_coords = (37.262308, -6.942055)
+
+        self._logger.info(f"Fetching route from {start_coords} to {end_coords} for destination '{destination}'")
+        route = get_route_geometry(start_coords, end_coords)
+
+        if not route: 
+            self._logger.warning(f"No route found for destination '{destination}'")
+            return None
+
+        if len(route) > 1000:
+            self._logger.debug(f"Route has {len(route)} points, reducing for performance.")
+            route = route[::5]
+
+        return route
+
+    def get_route_coords(self, destination: Tuple[float, float]):
+        start_coords = self.get_position()
+        end_coords = destination
+
+        self._logger.info(f"Fetching route from {start_coords} to {end_coords} for custom coordinates")
+        route = get_route_geometry(start_coords, end_coords)
+
+        if not route: 
+            self._logger.warning(f"No route found for custom coordinates {destination}")
+        if len(route) > 1000: 
+            self._logger.debug(f"Route has {len(route)} points, reducing for performance.")
+            route = route[::5]
+
+        return route

@@ -46,7 +46,7 @@ if __name__ == "__main__":
     try:
         root.mainloop()
     except KeyboardInterrupt:
-        print("Closing application...")
+        logger.info("Closing application...")
         try:
             gps_thread.stop()
         except Exception:
@@ -56,4 +56,4 @@ if __name__ == "__main__":
         except Exception:
             pass
     except Exception as e:
-        print(f"Unexpected error: {e}")
+        logger.error(f"Unexpected error: {e}")

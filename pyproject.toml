@@ -10,4 +10,5 @@ dependencies = [
     "tkintermapview>=1.29",
     "gpsd-py3>=0.3.0",
     "geopy>=2.4.1",
+    "polyline>=2.0.4",
 ]

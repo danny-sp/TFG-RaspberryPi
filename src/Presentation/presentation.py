@@ -38,7 +38,7 @@ class AppUIFrame(ctk.CTkFrame):
         super().__init__(parent)
         self._logger = setup_logger("AppUIFrame")
         self._logger.info(f"Initializing AppUIFrame with destination: {destination}")
-        self.root = parent
+        self._parent = parent
         self._controller = controller
         self._destination = destination
         self._gps_thread = gps_thread
@@ -66,30 +66,31 @@ class AppUIFrame(ctk.CTkFrame):
 
         self._setup_top_bar()
         self._setup_map()
+        self._setup_route()
         self._setup_controls()
 
-        self.position = self._controller.get_position()
-        self.car_marker = self.map_widget.set_marker(self.position[0], self.position[1], text=None, icon=self._car_icon, icon_anchor="center")
-        self.map_widget.set_position(self.position[0], self.position[1])
+        self._position = self._controller.get_position()
+        self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
+        self._map_widget.set_position(self._position[0], self._position[1])
 
         self._update()
 
 
 ##############################################################
 ##
-## MAIN UI SETUP METHODS: TOP BAR, MAP, CONTROLS
+## MAIN UI SETUP METHODS: TOP BAR, MAP, ROUTE, CONTROLS
 ##
 ##############################################################
 
     def _setup_top_bar(self):
-        self.top_bar = ctk.CTkFrame(self, fg_color="#2a2a2a", height=50, corner_radius=0)
-        self.top_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
-        self.top_bar.grid_propagate(False)
-        self.top_bar.configure(cursor="none")
+        self._top_bar = ctk.CTkFrame(self, fg_color="#2a2a2a", height=50, corner_radius=0)
+        self._top_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self._top_bar.grid_propagate(False)
+        self._top_bar.configure(cursor="none")
 
         # Close program button
-        self.btn_close = ctk.CTkButton(
-            self.top_bar,
+        self._btn_close = ctk.CTkButton(
+            self._top_bar,
             text="X",
             width=50,
             height=50,
@@ -100,46 +101,46 @@ class AppUIFrame(ctk.CTkFrame):
             command=self.close_app,
             cursor="none"
         )
-        self.btn_close.pack(side="left")
+        self._btn_close.pack(side="left")
 
         # GPS status label
-        self.lbl_gps = ctk.CTkLabel(
-            self.top_bar,
+        self._lbl_gps = ctk.CTkLabel(
+            self._top_bar,
             text="GPS",
             font=ctk.CTkFont(family="Arial", size=25, weight="bold"),
             text_color="red"
         )
-        self.lbl_gps.pack(side="top", pady=0)
-        self.lbl_gps.place(relx=0.5, rely=0.5, anchor="center")
+        self._lbl_gps.pack(side="top", pady=0)
+        self._lbl_gps.place(relx=0.5, rely=0.5, anchor="center")
 
         # Clock label
-        self.lbl_clock = ctk.CTkLabel(
-            self.top_bar,
+        self._lbl_clock = ctk.CTkLabel(
+            self._top_bar,
             text="",
             font=ctk.CTkFont(family="Arial", size=25, weight="bold"),
             text_color="white"
         )
-        self.lbl_clock.pack(side="right", padx=20)
+        self._lbl_clock.pack(side="right", padx=20)
 
     def _setup_map(self):
-        self.map_widget = TouchMapView(self, corner_radius=0, database_path="offline_map.db")
-        self.map_widget.grid(row=1, column=0, sticky="nsew")
-        self.map_widget.configure(cursor="none")
+        self._map_widget = TouchMapView(self, corner_radius=0, database_path="offline_map.db")
+        self._map_widget.grid(row=1, column=0, sticky="nsew")
+        self._map_widget.configure(cursor="none")
 
-        self.map_widget.set_zoom(10)
+        self._map_widget.set_zoom(10)
 
         try:
-            if hasattr(self.map_widget, "button_zoom_in"):
-                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_in.canvas_rect, state='hidden')
-                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_in.canvas_text, state='hidden')
+            if hasattr(self._map_widget, "button_zoom_in"):
+                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_in.canvas_rect, state='hidden')
+                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_in.canvas_text, state='hidden')
 
-            if hasattr(self.map_widget, "button_zoom_out"):
-                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_out.canvas_rect, state='hidden')
-                self.map_widget.canvas.itemconfig(self.map_widget.button_zoom_out.canvas_text, state='hidden')
+            if hasattr(self._map_widget, "button_zoom_out"):
+                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_out.canvas_rect, state='hidden')
+                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_out.canvas_text, state='hidden')
 
             # Zoom In Button
-            self.btn_zoom_in = ctk.CTkButton(
-                self.map_widget,
+            self._btn_zoom_in = ctk.CTkButton(
+                self._map_widget,
                 text="+",
                 width=80,
                 height=80,
@@ -150,11 +151,11 @@ class AppUIFrame(ctk.CTkFrame):
                 command=self._map_zoom_in,
                 cursor="none"
             )
-            self.btn_zoom_in.place(relx=0.03, rely=0.14, anchor="w")
+            self._btn_zoom_in.place(relx=0.03, rely=0.14, anchor="w")
 
             # Zoom Out Button
-            self.btn_zoom_out = ctk.CTkButton(
-                self.map_widget,
+            self._btn_zoom_out = ctk.CTkButton(
+                self._map_widget,
                 text="-",
                 width=80,
                 height=80,
@@ -165,10 +166,22 @@ class AppUIFrame(ctk.CTkFrame):
                 command=self._map_zoom_out,
                 cursor="none"
             )
-            self.btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
+            self._btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
 
         except Exception as e:
             self._logger.warning(f"Using default zoom buttons due to error: {e}")
+
+    def _setup_route(self):
+        if isinstance(self._destination, str) and self._destination != "NONE":
+            self._logger.info(f"Fetching route for destination: {self._destination}")
+            route = self._controller.get_route_str(self._destination)
+            if route:
+                self._map_widget.set_path(route)
+        elif isinstance(self._destination, tuple) and len(self._destination) == 2:
+            self._logger.info(f"Fetching route for custom coordinates: {self._destination}")
+            route = self._controller.get_route_coords(self._destination)
+            if route:
+                self._map_widget.set_path(route)
 
     def _setup_controls(self):
         self.frame_controls = ctk.CTkFrame(self, corner_radius=0)
@@ -206,12 +219,12 @@ class AppUIFrame(ctk.CTkFrame):
         self.quit()
 
     def _set_car_marker(self):
-        self.position = self._controller.get_position()
-        self._logger.debug(f"Current position: {self.position}")
-        self.car_marker.set_position(self.position[0], self.position[1])
+        self._position = self._controller.get_position()
+        self._logger.debug(f"Current position: {self._position}")
+        self._car_marker.set_position(self._position[0], self._position[1])
 
     def _reset_state(self):
-        self.map_widget.delete_all_marker()
+        self._map_widget.delete_all_marker()
         self._set_car_marker()
 
         # Remove old scroller
@@ -224,21 +237,21 @@ class AppUIFrame(ctk.CTkFrame):
             self.scrollable_frame = None
 
     def _map_zoom_in(self):
-        if self.map_widget.zoom < MAX_ZOOM_LEVEL:
-            self.map_widget.set_zoom(self.map_widget.zoom + 1)
+        if self._map_widget.zoom < MAX_ZOOM_LEVEL:
+            self._map_widget.set_zoom(self._map_widget.zoom + 1)
 
     def _map_zoom_out(self):
-        if self.map_widget.zoom > MIN_ZOOM_LEVEL:
-            self.map_widget.set_zoom(self.map_widget.zoom - 1)
+        if self._map_widget.zoom > MIN_ZOOM_LEVEL:
+            self._map_widget.set_zoom(self._map_widget.zoom - 1)
 
     def _update(self):
         current_time = time.strftime("%H:%M:%S")
-        self.lbl_clock.configure(text=current_time)
+        self._lbl_clock.configure(text=current_time)
 
         if self._controller.get_connected_gps():
-            self.lbl_gps.configure(text="GPS: Connected", text_color="green")
+            self._lbl_gps.configure(text="GPS: Connected", text_color="green")
         else:
-            self.lbl_gps.configure(text="GPS: Disconnected", text_color="red")
+            self._lbl_gps.configure(text="GPS: Disconnected", text_color="red")
 
         self._set_car_marker()
 
@@ -282,8 +295,8 @@ class AppUIFrame(ctk.CTkFrame):
 
         for o in options:
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
-            self.map_widget.set_marker(lat, lon, text=o.charging_station.name)
-            geodetic_distance = geodesic(self.position, (lat, lon)).kilometers
+            self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
+            geodetic_distance = geodesic(self._position, (lat, lon)).kilometers
             price_text = f"{o.price:.2f}€"
 
             btn_station = ctk.CTkButton(

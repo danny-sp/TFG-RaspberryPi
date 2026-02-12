@@ -6,16 +6,16 @@ from typing import Callable, Optional
 class WelcomeFrame(ctk.CTkFrame):
     def __init__(self, parent, on_select: Optional[Callable[[str], None]] = None):
         super().__init__(parent)
-        self.parent = parent
-        self.on_select = on_select
-        self.selected: Optional[str] = None
+        self._parent = parent
+        self._on_select = on_select
+        self._selected: Optional[str] = None
 
         # Ensure the root window is fullscreen and hidden cursor
         try:
-            self.parent.title("TFG - Welcome")
-            self.parent.geometry("800x480")
-            self.parent.attributes("-fullscreen", True)
-            self.parent.config(cursor="none")
+            self._parent.title("TFG - Welcome")
+            self._parent.geometry("800x480")
+            self._parent.attributes("-fullscreen", True)
+            self._parent.config(cursor="none")
         except Exception:
             pass
 
@@ -44,10 +44,10 @@ class WelcomeFrame(ctk.CTkFrame):
         self.btn_exit.grid(row=1, column=1, sticky="nsew")
 
     def _select(self, city: str):
-        self.selected = city
-        if self.on_select:
+        self._selected = city
+        if self._on_select:
             try:
-                self.on_select(city)
+                self._on_select(city)
             except Exception:
                 pass
 
