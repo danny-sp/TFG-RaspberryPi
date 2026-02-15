@@ -13,10 +13,16 @@ from src.Domain.option import Option
 
 from src.Utils.logger import setup_logger
 
-MAX_ZOOM_LEVEL = 15
+MAX_ZOOM_LEVEL = 17
 MIN_ZOOM_LEVEL = 5
 
 class TouchMapView(TkinterMapView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_mouse_down_position = None
+        self.last_mouse_down_time = None
+        self._moved = False
+
     def mouse_move(self, event):
         if self.last_mouse_down_position is None:
             self.last_mouse_down_position = (event.x, event.y)
@@ -32,6 +38,15 @@ class TouchMapView(TkinterMapView):
             self.last_mouse_down_time = time.time()
         else:
             super().mouse_move(event)
+            self._moved = True
+
+    @property
+    def moved(self):
+        return self._moved
+
+    @moved.setter
+    def moved(self, value):
+        self._moved = value
 
 class AppUIFrame(ctk.CTkFrame):
     def __init__(self, parent, controller: Controller, destination: str, gps_thread):
@@ -72,6 +87,8 @@ class AppUIFrame(ctk.CTkFrame):
         self._position = self._controller.get_position()
         self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
         self._map_widget.set_position(self._position[0], self._position[1])
+        self._auto = True
+        self._auto_timer = 5
 
         self._update()
 
@@ -91,11 +108,11 @@ class AppUIFrame(ctk.CTkFrame):
         # Close program button
         self._btn_close = ctk.CTkButton(
             self._top_bar,
-            text="X",
+            text="\uf00d",
             width=50,
             height=50,
             corner_radius=0,
-            font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
+            font=ctk.CTkFont(family="Font Awesome 6 Free", size=24, weight="bold"),
             fg_color="red",
             hover_color="red",
             command=self.close_app,
@@ -141,11 +158,11 @@ class AppUIFrame(ctk.CTkFrame):
             # Zoom In Button
             self._btn_zoom_in = ctk.CTkButton(
                 self._map_widget,
-                text="+",
+                text="\uf067",
                 width=80,
                 height=80,
                 corner_radius=0,
-                font=ctk.CTkFont(family="Verdana", size=40, weight="bold"),
+                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
                 fg_color="gray",
                 hover_color="gray",
                 command=self._map_zoom_in,
@@ -156,11 +173,11 @@ class AppUIFrame(ctk.CTkFrame):
             # Zoom Out Button
             self._btn_zoom_out = ctk.CTkButton(
                 self._map_widget,
-                text="-",
+                text="\uf068",
                 width=80,
                 height=80,
                 corner_radius=0,
-                font=ctk.CTkFont(family="Verdana", size=40, weight="bold"),
+                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
                 fg_color="gray",
                 hover_color="gray",
                 command=self._map_zoom_out,
@@ -168,18 +185,32 @@ class AppUIFrame(ctk.CTkFrame):
             )
             self._btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
 
+            self._btn_center = ctk.CTkButton(
+                self._map_widget,
+                text="\uf601",
+                width=80,
+                height=80,
+                corner_radius=0,
+                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
+                fg_color="gray",
+                hover_color="gray",
+                command=self._map_center,
+                cursor="none"
+            )
+            self._btn_center.place(relx=0.37, rely=0.14, anchor="w")
+
         except Exception as e:
             self._logger.warning(f"Using default zoom buttons due to error: {e}")
 
     def _setup_route(self):
         if isinstance(self._destination, str) and self._destination != "NONE":
             self._logger.info(f"Fetching route for destination: {self._destination}")
-            route = self._controller.get_route_str(self._destination)
+            route, distance, duration = self._controller.get_route_str(self._destination)
             if route:
                 self._map_widget.set_path(route)
         elif isinstance(self._destination, tuple) and len(self._destination) == 2:
             self._logger.info(f"Fetching route for custom coordinates: {self._destination}")
-            route = self._controller.get_route_coords(self._destination)
+            route, distance, duration = self._controller.get_route_coords(self._destination)
             if route:
                 self._map_widget.set_path(route)
 
@@ -239,10 +270,19 @@ class AppUIFrame(ctk.CTkFrame):
     def _map_zoom_in(self):
         if self._map_widget.zoom < MAX_ZOOM_LEVEL:
             self._map_widget.set_zoom(self._map_widget.zoom + 1)
+            self._auto = False
+            self._auto_timer = 5
 
     def _map_zoom_out(self):
         if self._map_widget.zoom > MIN_ZOOM_LEVEL:
             self._map_widget.set_zoom(self._map_widget.zoom - 1)
+            self._auto = False
+            self._auto_timer = 5
+
+    def _map_center(self):
+        self._auto = True
+        self._map_widget.set_position(self._position[0], self._position[1])
+        self._map_widget.set_zoom(17)
 
     def _update(self):
         current_time = time.strftime("%H:%M:%S")
@@ -254,6 +294,19 @@ class AppUIFrame(ctk.CTkFrame):
             self._lbl_gps.configure(text="GPS: Disconnected", text_color="red")
 
         self._set_car_marker()
+
+        if self._map_widget.moved:
+            self._auto = False
+            self._auto_timer = 5
+            self._map_widget.moved = False
+
+        if self._auto:
+            self._map_center()
+        else:
+            if self._auto_timer > 0:
+                self._auto_timer -= 1
+            else:
+                self._auto = True
 
         self.after(1000, self._update)
 
@@ -301,7 +354,7 @@ class AppUIFrame(ctk.CTkFrame):
 
             btn_station = ctk.CTkButton(
             self.scrollable_frame,
-            text=f"{o.charging_station.name}\n{geodetic_distance:.2f} km{price_text}",
+            text=f"{o.charging_station.name}\n{geodetic_distance:.2f} km {price_text}",
             width=200,
             height=80,
             corner_radius=0,

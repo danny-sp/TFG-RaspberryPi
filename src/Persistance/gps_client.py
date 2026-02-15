@@ -2,6 +2,8 @@ import gpsd
 import threading
 import time
 
+from src.Utils.logger import setup_logger
+
 class GpsPoll(threading.Thread):
     def __init__(self):
         super().__init__()
@@ -10,6 +12,7 @@ class GpsPoll(threading.Thread):
         self.running = True
         self.connected = False
         self._lock = threading.Lock() # Avoids race conditions
+        self._logger = setup_logger("gps_client")
 
     def run(self):
         """
@@ -32,7 +35,7 @@ class GpsPoll(threading.Thread):
                         self.connected = False
                 time.sleep(1)  # Poll every second
         except Exception as e:
-            print(f"Error en el hilo GPS: {e}")
+            self._logger.error(f"Error in GPS thread: {e}")
             self.connected = False
 
     def get_data(self):
@@ -40,7 +43,6 @@ class GpsPoll(threading.Thread):
         Returns the last known GPS position
         """
         with self._lock:
-            print("Getting GPS data...", self.last_value)
             # Return a shallow copy
             return self.last_value
 

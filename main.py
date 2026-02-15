@@ -1,4 +1,5 @@
 import customtkinter as ctk
+import tkinter as tk
 
 from src.Presentation.presentation import AppUIFrame
 from src.Presentation.welcome import WelcomeFrame
@@ -14,6 +15,7 @@ def on_welcome_select(destination: str):
     if destination == "EXIT":
         logger.info("EXIT selected — stopping.")
         root.quit()
+        return
     elif destination == "NONE":
         logger.info("No destination selected. Navigating without route.")
     else:
@@ -40,7 +42,14 @@ if __name__ == "__main__":
     gps_thread.start()
     controller = Controller(gps_client=gps_thread)
 
-    welcome_frame = WelcomeFrame(root, on_select=on_welcome_select)
+    selected_dest = tk.StringVar(root, value="")
+    def _on_selected_var(*args):
+        dest = selected_dest.get()
+        if dest:
+            on_welcome_select(dest)
+    selected_dest.trace_add("write", _on_selected_var)
+
+    welcome_frame = WelcomeFrame(root, selected_var=selected_dest)
     welcome_frame.pack(fill="both", expand=True)
 
     try:

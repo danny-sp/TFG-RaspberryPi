@@ -84,7 +84,7 @@ class Controller:
             end_coords = (37.262308, -6.942055)
 
         self._logger.info(f"Fetching route from {start_coords} to {end_coords} for destination '{destination}'")
-        route = get_route_geometry(start_coords, end_coords)
+        route, distance, duration = get_route_geometry(start_coords, end_coords)
 
         if not route: 
             self._logger.warning(f"No route found for destination '{destination}'")
@@ -94,19 +94,19 @@ class Controller:
             self._logger.debug(f"Route has {len(route)} points, reducing for performance.")
             route = route[::5]
 
-        return route
+        return route, distance, duration
 
     def get_route_coords(self, destination: Tuple[float, float]):
         start_coords = self.get_position()
         end_coords = destination
 
         self._logger.info(f"Fetching route from {start_coords} to {end_coords} for custom coordinates")
-        route = get_route_geometry(start_coords, end_coords)
+        route, distance, duration = get_route_geometry(start_coords, end_coords)
 
-        if not route: 
+        if not route:
             self._logger.warning(f"No route found for custom coordinates {destination}")
         if len(route) > 1000: 
             self._logger.debug(f"Route has {len(route)} points, reducing for performance.")
             route = route[::5]
 
-        return route
+        return route, distance, duration

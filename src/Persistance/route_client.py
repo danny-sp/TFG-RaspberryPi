@@ -16,7 +16,9 @@ def get_route_geometry(start_coords, end_coords):
             return None
 
         encoded_geometry = data['routes'][0]['geometry']
-        return polyline.decode(encoded_geometry)
+        distance = data['routes'][0]['distance']
+        duration = data['routes'][0]['duration']
+        return polyline.decode(encoded_geometry), distance, duration
 
     except requests.RequestException as e:
         logger.error(f"Connection error: {e}")
