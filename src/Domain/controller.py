@@ -1,4 +1,5 @@
 from datetime import datetime, time
+from geopy.distance import geodesic
 from typing import Tuple
 
 from src.Domain.charger_type import ChargerType
@@ -80,16 +81,18 @@ class Controller:
             end_coords = (43.262873, -2.947564)
         elif destination == "MADRID":
             end_coords = (40.451843, -3.686502)
-        else: # HUELVA
-            end_coords = (37.262308, -6.942055)
+        else:
+            self._logger.warning(f"Unknown destination '{destination}' requested")
+            return None
 
         self._logger.info(f"Fetching route from {start_coords} to {end_coords} for destination '{destination}'")
-        route, distance, duration = get_route_geometry(start_coords, end_coords)
+        response = get_route_geometry(start_coords, end_coords)
 
-        if not route: 
+        if response is None:
             self._logger.warning(f"No route found for destination '{destination}'")
             return None
 
+        route, distance, duration = response
         if len(route) > 1000:
             self._logger.debug(f"Route has {len(route)} points, reducing for performance.")
             route = route[::5]
@@ -105,8 +108,24 @@ class Controller:
 
         if not route:
             self._logger.warning(f"No route found for custom coordinates {destination}")
-        if len(route) > 1000: 
+        if len(route) > 1000:
             self._logger.debug(f"Route has {len(route)} points, reducing for performance.")
             route = route[::5]
 
         return route, distance, duration
+
+    def get_distance_coords(self, destination: Tuple[float, float]) -> float:
+        start_coords = self.get_position()
+        end_coords = destination
+
+        self._logger.info(f"Fetching distance from {start_coords} to {end_coords} for custom coordinates")
+        response = get_route_geometry(start_coords, end_coords)
+
+        if response is None:
+            self._logger.warning(f"No route found for custom coordinates {destination}")
+            distance = geodesic(start_coords, end_coords).kilometers
+        else:
+            _, distance, _ = response
+            distance /= 1000
+
+        return distance

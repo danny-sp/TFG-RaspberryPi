@@ -4,7 +4,6 @@ import time
 import math
 import os
 import tkinter as tk
-from geopy.distance import geodesic
 
 from src.Presentation.emergent import ConfirmationDialog
 
@@ -205,13 +204,16 @@ class AppUIFrame(ctk.CTkFrame):
     def _setup_route(self):
         if isinstance(self._destination, str) and self._destination != "NONE":
             self._logger.info(f"Fetching route for destination: {self._destination}")
-            route, distance, duration = self._controller.get_route_str(self._destination)
-            if route:
+            response = self._controller.get_route_str(self._destination)
+            if response is not None:
+                route, distance, duration = response
                 self._map_widget.set_path(route)
+
         elif isinstance(self._destination, tuple) and len(self._destination) == 2:
             self._logger.info(f"Fetching route for custom coordinates: {self._destination}")
-            route, distance, duration = self._controller.get_route_coords(self._destination)
-            if route:
+            response = self._controller.get_route_coords(self._destination)
+            if response is not None:
+                route, distance, duration = response
                 self._map_widget.set_path(route)
 
     def _setup_controls(self):
@@ -349,25 +351,27 @@ class AppUIFrame(ctk.CTkFrame):
         for o in options:
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
             self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
-            geodetic_distance = geodesic(self._position, (lat, lon)).kilometers
-            price_text = f"{o.price:.2f}€"
+            distance = self._controller.get_distance_coords((lat, lon))
+            price_text = f"{o.price:.2f}"
 
             btn_station = ctk.CTkButton(
             self.scrollable_frame,
-            text=f"{o.charging_station.name}\n{geodetic_distance:.2f} km {price_text}",
+            text=f"{o.charging_station.name}\n{distance:.2f} km {price_text} €",
             width=200,
             height=80,
             corner_radius=0,
             font=ctk.CTkFont(family="Arial", size=30),
             cursor="none",
-            command=lambda s=o: self._on_option_click(s)
+            command=lambda s=o, p=price_text, d=distance: self._on_option_click(s, p, d)
             )
             btn_station.pack(pady=10)
 
 
-    def _on_option_click(self, option: Option):
+    def _on_option_click(self, option: Option, price_text: str, distance: float):
         ConfirmationDialog(
             self,
             option,
+            price_text,
+            distance,
             on_confirm=lambda: self._controller.select_station(option)
         )

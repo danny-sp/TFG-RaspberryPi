@@ -16,7 +16,8 @@ class Option:
         # self._duration_hours = duration_hours
         # self._price = price
         # ONLY FOR DEMO. CALCULATIONS SHOULD BE DONE IN SERVER
-        self._duration_hours = (end_time - start_time).total_seconds() / 3600
+        self._duration_seconds = (end_time - start_time).total_seconds()
+        self._duration_hours = self._duration_seconds / 3600
         self._price = self._duration_hours * self._price_rate.price_per_kwh
 
     ##############
@@ -45,6 +46,10 @@ class Option:
     @property
     def end_time(self) -> datetime:
         return self._end_time
+
+    @property
+    def duration_seconds(self) -> float:
+        return self._duration_seconds
 
     @property
     def duration_hours(self) -> float:
