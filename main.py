@@ -4,14 +4,14 @@ import tkinter as tk
 from src.Presentation.presentation import AppUIFrame
 from src.Presentation.welcome import WelcomeFrame
 
-from src.Domain.controller import Controller
+from src.Domain.control_position import ControlPosition
 
 from src.Persistance.gps_client import GpsPoll
 
 from src.Utils.logger import setup_logger
 
 def on_welcome_select(destination: str):
-    global logger, welcome_frame, root, controller, gps_thread
+    global logger, welcome_frame, root, gps_controller, gps_thread
     if destination == "EXIT":
         logger.info("EXIT selected — stopping.")
         root.quit()
@@ -28,7 +28,7 @@ def on_welcome_select(destination: str):
         pass
 
     logger.info("Initializing main application frame...")
-    app_frame = AppUIFrame(root, controller, destination, gps_thread)
+    app_frame = AppUIFrame(root, gps_controller, destination, gps_thread)
     app_frame.pack(fill="both", expand=True)
 
 
@@ -37,10 +37,10 @@ if __name__ == "__main__":
 
     root = ctk.CTk()
 
-    # start gps and controller
+    # start gps and gps_controller
     gps_thread = GpsPoll()
     gps_thread.start()
-    controller = Controller(gps_client=gps_thread)
+    gps_controller = ControlPosition(gps_client=gps_thread)
 
     selected_dest = tk.StringVar(root, value="")
     def _on_selected_var(*args):

@@ -8,6 +8,10 @@ import tkinter as tk
 from src.Presentation.emergent import ConfirmationDialog
 
 from src.Domain.controller import Controller
+
+from src.Domain.control_route import ControlRoute
+from src.Domain.control_position import ControlPosition
+
 from src.Domain.option import Option
 
 from src.Utils.logger import setup_logger
@@ -48,14 +52,15 @@ class TouchMapView(TkinterMapView):
         self._moved = value
 
 class AppUIFrame(ctk.CTkFrame):
-    def __init__(self, parent, controller: Controller, destination: str, gps_thread):
+    def __init__(self, parent, controller: ControlPosition, destination: str, gps_thread):
         super().__init__(parent)
         self._logger = setup_logger("AppUIFrame")
         self._logger.info(f"Initializing AppUIFrame with destination: {destination}")
         self._parent = parent
-        self._controller = controller
-        self._destination = destination
+        self._gps_controller = controller
+        self._position = self._gps_controller.get_position()
         self._gps_thread = gps_thread
+        self._destination = destination
 
         self._car_icon = None
         TARGET_CAR_ICON_SIZE = 50
@@ -83,7 +88,6 @@ class AppUIFrame(ctk.CTkFrame):
         self._setup_route()
         self._setup_controls()
 
-        self._position = self._controller.get_position()
         self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
         self._map_widget.set_position(self._position[0], self._position[1])
         self._auto = True
@@ -204,14 +208,14 @@ class AppUIFrame(ctk.CTkFrame):
     def _setup_route(self):
         if isinstance(self._destination, str) and self._destination != "NONE":
             self._logger.info(f"Fetching route for destination: {self._destination}")
-            response = self._controller.get_route_str(self._destination)
+            response = ControlRoute.get_route_str(self._position, self._destination)
             if response is not None:
                 route, distance, duration = response
                 self._map_widget.set_path(route)
 
         elif isinstance(self._destination, tuple) and len(self._destination) == 2:
             self._logger.info(f"Fetching route for custom coordinates: {self._destination}")
-            response = self._controller.get_route_coords(self._destination)
+            response = ControlRoute.get_route_coords(self._position, self._destination)
             if response is not None:
                 route, distance, duration = response
                 self._map_widget.set_path(route)
@@ -252,7 +256,7 @@ class AppUIFrame(ctk.CTkFrame):
         self.quit()
 
     def _set_car_marker(self):
-        self._position = self._controller.get_position()
+        self._position = self._gps_controller.get_position()
         self._logger.debug(f"Current position: {self._position}")
         self._car_marker.set_position(self._position[0], self._position[1])
 
@@ -290,7 +294,7 @@ class AppUIFrame(ctk.CTkFrame):
         current_time = time.strftime("%H:%M:%S")
         self._lbl_clock.configure(text=current_time)
 
-        if self._controller.get_connected_gps():
+        if self._gps_controller.get_connected_gps():
             self._lbl_gps.configure(text="GPS: Connected", text_color="green")
         else:
             self._lbl_gps.configure(text="GPS: Disconnected", text_color="red")
@@ -351,7 +355,7 @@ class AppUIFrame(ctk.CTkFrame):
         for o in options:
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
             self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
-            distance = self._controller.get_distance_coords((lat, lon))
+            distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
             price_text = f"{o.price:.2f}"
 
             btn_station = ctk.CTkButton(

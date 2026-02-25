@@ -6,7 +6,7 @@ from src.Utils.logger import setup_logger
 def get_route_geometry(start_coords, end_coords):
     logger = setup_logger("RouteClient")
 
-    url = f"http://server:5000/route/v1/driving/{start_coords[1]},{start_coords[0]};{end_coords[1]},{end_coords[0]}?overview=full"
+    url = f"http://serveresi:5000/route/v1/driving/{start_coords[1]},{start_coords[0]};{end_coords[1]},{end_coords[0]}?overview=full"
     try:
         response = requests.get(url, timeout=5)
         data = response.json()
