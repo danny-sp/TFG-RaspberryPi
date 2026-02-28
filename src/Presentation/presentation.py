@@ -9,8 +9,9 @@ from src.Presentation.emergent import ConfirmationDialog
 
 from src.Domain.controller import Controller
 
-from src.Domain.control_route import ControlRoute
 from src.Domain.control_position import ControlPosition
+from src.Domain.control_requests import ControlRequests
+from src.Domain.control_route import ControlRoute
 
 from src.Domain.option import Option
 
@@ -326,9 +327,12 @@ class AppUIFrame(ctk.CTkFrame):
     def _on_button_click(self):
         # Remove all markers except the car
         self._reset_state()
-
-        options = self._controller.get_stations()
         self._set_car_marker()
+
+        options = ControlRequests.make_request(self._position, self._destination)
+        if not options:
+            self._logger.warning("No options received for the request")
+            return
 
         # Create a scrollable frame for station buttons
         self.scrollable_frame = ctk.CTkScrollableFrame(

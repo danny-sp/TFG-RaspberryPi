@@ -1,5 +1,8 @@
 import customtkinter as ctk
+from dotenv import load_dotenv
+load_dotenv()
 import tkinter as tk
+import os
 
 from src.Presentation.presentation import AppUIFrame
 from src.Presentation.welcome import WelcomeFrame
@@ -34,7 +37,6 @@ def on_welcome_select(destination: str):
 
 if __name__ == "__main__":
     logger = setup_logger("main")
-
     root = ctk.CTk()
 
     # start gps and gps_controller

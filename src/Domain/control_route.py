@@ -1,7 +1,7 @@
 from typing import Tuple
 from geopy.distance import geodesic
 
-from src.Persistance.route_client import get_route_geometry
+from src.Persistance.route_client import RouteClient
 
 from src.Utils.logger import setup_logger
 
@@ -22,7 +22,7 @@ class ControlRoute:
             return None
 
         cls._logger.info(f"Fetching route from {start_coords} to {end_coords} for destination '{destination}'")
-        response = get_route_geometry(start_coords, end_coords)
+        response = RouteClient.get_route_geometry(start_coords, end_coords)
 
         if response is None:
             cls._logger.warning(f"No route found for destination '{destination}'")
@@ -36,7 +36,7 @@ class ControlRoute:
         end_coords = destination
 
         cls._logger.info(f"Fetching route from {start_coords} to {end_coords} for custom coordinates")
-        response = get_route_geometry(start_coords, end_coords)
+        response = RouteClient.get_route_geometry(start_coords, end_coords)
 
         if response is None:
             cls._logger.warning(f"No route found for custom coordinates {destination}")
@@ -50,7 +50,7 @@ class ControlRoute:
         end_coords = destination
 
         cls._logger.info(f"Fetching distance from {start_coords} to {end_coords} for custom coordinates")
-        response = get_route_geometry(start_coords, end_coords)
+        response = RouteClient.get_route_geometry(start_coords, end_coords)
 
         if response is None:
             cls._logger.warning(f"No route found for custom coordinates {destination}")
