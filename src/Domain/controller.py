@@ -11,7 +11,7 @@ from src.Domain.service import Service
 from src.Utils.constants import ServiceType
 
 class Controller:
-    @staticmethod
+    @classmethod
     def get_stations(cls):
         charger_type1 = ChargerType(id=1, name="Type 2", kw_speed=22, description="Standard Type 2 charger")
         charger_type2 = ChargerType(id=2, name="CCS", kw_speed=50, description="Fast CCS charger")

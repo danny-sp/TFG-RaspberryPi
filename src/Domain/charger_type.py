@@ -5,15 +5,6 @@ class ChargerType:
         self._kw_speed = kw_speed
         self._description = description
 
-    def insert(self):
-        self._chargerTypeDAO.insert(self)
-
-    def update(self):
-        self._chargerTypeDAO.update(self)
-
-    def delete(self):
-        self._chargerTypeDAO.delete(self)
-
     ##############
     # PROPERTIES #
     ##############

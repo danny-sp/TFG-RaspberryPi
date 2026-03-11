@@ -1,11 +1,13 @@
 from datetime import datetime
+from typing import Tuple
 import uuid
 
 class Request:
-    def __init__(self, plate: str, destination: str):
+    def __init__(self, plate: str, position: Tuple[float, float], destination: Tuple[float, float]):
         self._uuid = str(uuid.uuid4())
         self._plate = plate
         self._timestamp = datetime.now()
+        self._position = position
         self._destination = destination
 
     @property
@@ -21,7 +23,11 @@ class Request:
         return self._timestamp
 
     @property
-    def destination(self) -> str:
+    def position(self) -> Tuple[float, float]:
+        return self._position
+
+    @property
+    def destination(self) -> Tuple[float, float]:
         return self._destination
 
     def to_dict(self):
@@ -29,5 +35,8 @@ class Request:
             "uuid": self._uuid,
             "plate": self._plate,
             "timestamp": self._timestamp.isoformat(),
-            "destination": self._destination
+            "latitude": self._position[0],
+            "longitude": self._position[1],
+            "destination_lat": self._destination[0],
+            "destination_lon": self._destination[1]
         }

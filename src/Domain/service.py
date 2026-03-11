@@ -11,15 +11,6 @@ class Service:
         self._open_time = open_time
         self._close_time = close_time
 
-    def insert(self):
-        self._serviceDAO.insert(self)
-
-    def update(self):
-        self._serviceDAO.update(self)
-
-    def delete(self):
-        self._serviceDAO.delete(self)
-
     ##############
     # PROPERTIES #
     ##############

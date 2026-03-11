@@ -7,15 +7,6 @@ class Charger:
         self._busy = busy
         self._active = active
 
-    def insert(self):
-        self._chargerDAO.insert(self)
-
-    def update(self):
-        self._chargerDAO.update(self)
-
-    def delete(self):
-        self._chargerDAO.delete(self)
-
     ##############
     # PROPERTIES #
     ##############

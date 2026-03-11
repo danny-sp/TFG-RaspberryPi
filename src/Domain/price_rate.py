@@ -3,21 +3,12 @@ from datetime import datetime
 from src.Domain.charger_type import ChargerType
 
 class PriceRate:
-    def __init__(self, id: int, charger_type: ChargerType, start_date: datetime, end_date: datetime, price_per_kwh: float):
+    def __init__(self, id: int, charger_type: ChargerType = None, start_date: datetime = datetime.now(), end_date: datetime = None, price_per_kwh: float = 0):
         self._id = id
         self._charger_type = charger_type
         self._start_date = start_date
         self._end_date = end_date
         self._price_per_kwh = price_per_kwh
-
-    def insert(self):
-        self._price_rateDAO.insert(self)
-
-    def update(self):
-        self._price_rateDAO.update(self)
-
-    def delete(self):
-        self._price_rateDAO.delete(self)
 
     ##############
     # PROPERTIES #

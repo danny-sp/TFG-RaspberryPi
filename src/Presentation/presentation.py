@@ -15,6 +15,8 @@ from src.Domain.control_route import ControlRoute
 
 from src.Domain.option import Option
 
+from src.Utils.constants import Destinations
+
 from src.Utils.logger import setup_logger
 
 MAX_ZOOM_LEVEL = 17
@@ -328,8 +330,10 @@ class AppUIFrame(ctk.CTkFrame):
         # Remove all markers except the car
         self._reset_state()
         self._set_car_marker()
+        # options = Controller.get_stations()
+        dest_coords = Destinations[self._destination].value if self._destination in Destinations.__members__ else None
 
-        options = ControlRequests.make_request(self._position, self._destination)
+        options = ControlRequests.make_request(self._position, dest_coords)
         if not options:
             self._logger.warning("No options received for the request")
             return

@@ -7,7 +7,7 @@ from src.Utils.logger import setup_logger
 
 class ControlRoute:
 
-    _logger = setup_logger("Controller")
+    _logger = setup_logger("ControlRoute")
 
     @classmethod
     def get_route_str(cls, coords: Tuple[float, float], destination: str):
@@ -21,7 +21,7 @@ class ControlRoute:
             cls._logger.warning(f"Unknown destination '{destination}' requested")
             return None
 
-        cls._logger.info(f"Fetching route from {start_coords} to {end_coords} for destination '{destination}'")
+        cls._logger.debug(f"Fetching route from {start_coords} to {end_coords} for destination '{destination}'")
         response = RouteClient.get_route_geometry(start_coords, end_coords)
 
         if response is None:
@@ -35,7 +35,7 @@ class ControlRoute:
         start_coords = coords
         end_coords = destination
 
-        cls._logger.info(f"Fetching route from {start_coords} to {end_coords} for custom coordinates")
+        cls._logger.debug(f"Fetching route from {start_coords} to {end_coords} for custom coordinates")
         response = RouteClient.get_route_geometry(start_coords, end_coords)
 
         if response is None:
@@ -49,7 +49,7 @@ class ControlRoute:
         start_coords = coords
         end_coords = destination
 
-        cls._logger.info(f"Fetching distance from {start_coords} to {end_coords} for custom coordinates")
+        cls._logger.debug(f"Fetching distance from {start_coords} to {end_coords} for custom coordinates")
         response = RouteClient.get_route_geometry(start_coords, end_coords)
 
         if response is None:
