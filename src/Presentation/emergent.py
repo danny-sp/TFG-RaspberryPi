@@ -1,9 +1,14 @@
 import customtkinter as ctk
+from typing import Tuple
+
+from src.Domain.control_route import ControlRoute
 
 from src.Domain.option import Option
 
+from src.Utils.constants import ServiceType
+
 class ConfirmationDialog:
-    def __init__(self, parent, option: Option, price_text: str, distance: float, on_confirm=None):
+    def __init__(self, parent, option: Option, position: Tuple[float, float], on_confirm=None):
         """
         Create a custom confirmation dialog.
 
@@ -15,13 +20,13 @@ class ConfirmationDialog:
             on_confirm: Callback function to call when user clicks "YES"
         """
         self.on_confirm = on_confirm
-        self._price_text = price_text
-        self._distance = distance
+        self._price_text = f"{option.price:.2f}"
+        self._distance = ControlRoute.get_distance_coords(position, option.charging_station.location)
 
         # Create custom confirmation dialog
         self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("Confirmation")
-        self.dialog.geometry("550x270")
+        self.dialog.geometry("570x270")
         self.dialog.resizable(False, False)
         self.dialog.attributes("-topmost", True)
         self.dialog.overrideredirect(True)
@@ -29,9 +34,9 @@ class ConfirmationDialog:
 
         # Center the dialog
         self.dialog.update_idletasks()
-        x = (self.dialog.winfo_screenwidth() // 2) - (550 // 2)
+        x = (self.dialog.winfo_screenwidth() // 2) - (570 // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (270 // 2)
-        self.dialog.geometry(f"550x270+{x}+{y}")
+        self.dialog.geometry(f"570x270+{x}+{y}")
 
         # Main frame with black border
         main_frame = ctk.CTkFrame(
@@ -42,15 +47,17 @@ class ConfirmationDialog:
         )
         main_frame.pack(fill="both", expand=True)
 
-        services = ""
-        for service in option.charging_station.services:
-            services += service.type + " "
+        services = set()
 
-        duration = option.duration_seconds
+        for service in option.services_nearby:
+            services.add(service)
+
+        services_str = " ".join(services)
+        duration = option.duration_hours * 3600
         h, r = divmod(duration, 3600)
         m, _ = divmod(r, 60)
 
-        text = f"{option.charging_station.name} selected!\n{services}\n\uf017 {h:.0f}h {m}m \uf153 {price_text} \uf4d7 {self._distance:.1f}km"
+        text = f"{option.charging_station.name} selected!\n\uf017 {h:.0f}h {m}m \uf153 {self._price_text} \uf4d7 {self._distance:.1f}km"
 
         # Message label
         label = ctk.CTkLabel(
@@ -61,6 +68,13 @@ class ConfirmationDialog:
         )
         label.pack(pady=20)
 
+        services_lbl = ctk.CTkLabel(
+            main_frame,
+            text=f"{services_str}",
+            font=ctk.CTkFont(family="Font Awesome 6 Free Solid", size=30)
+        )
+        services_lbl.pack(pady=10)
+
         # Button frame
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
         button_frame.pack(pady=10)
@@ -70,7 +84,7 @@ class ConfirmationDialog:
             button_frame,
             text="Yes",
             width=190,
-            height=60,
+            height=80,
             corner_radius=8,
             font=ctk.CTkFont(size=22),
             cursor="none",
@@ -85,7 +99,7 @@ class ConfirmationDialog:
             button_frame,
             text="No",
             width=190,
-            height=60,
+            height=80,
             corner_radius=8,
             font=ctk.CTkFont(size=22),
             cursor="none",

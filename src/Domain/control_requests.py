@@ -20,7 +20,8 @@ class ControlRequests:
         end_coords = destination
 
         cls._logger.info(f"Making request from {start_coords} to {end_coords} with plate {cls._plate}")
-        r = Request(plate=cls._plate, position=start_coords, destination=end_coords)
+        # TODO: Fixed current percent for testing.
+        r = Request(plate=cls._plate, current_percent=60.0, position=start_coords, destination=end_coords)
 
         r_dict = r.to_dict()
         r_json = json.dumps(r_dict)

@@ -90,8 +90,8 @@ class AppUIFrame(ctk.CTkFrame):
         self._setup_map()
         self._setup_route()
         self._setup_controls()
-
         self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
+
         self._map_widget.set_position(self._position[0], self._position[1])
         self._auto = True
         self._auto_timer = 5
@@ -260,12 +260,12 @@ class AppUIFrame(ctk.CTkFrame):
 
     def _set_car_marker(self):
         self._position = self._gps_controller.get_position()
-        self._logger.debug(f"Current position: {self._position}")
+        # self._logger.debug(f"Current position: {self._position}")
         self._car_marker.set_position(self._position[0], self._position[1])
 
     def _reset_state(self):
         self._map_widget.delete_all_marker()
-        self._set_car_marker()
+        self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
 
         # Remove old scroller
         if hasattr(self, 'scrollable_frame') and self.scrollable_frame is not None:
@@ -329,7 +329,7 @@ class AppUIFrame(ctk.CTkFrame):
     def _on_button_click(self):
         # Remove all markers except the car
         self._reset_state()
-        self._set_car_marker()
+
         # options = Controller.get_stations()
         dest_coords = Destinations[self._destination].value if self._destination in Destinations.__members__ else None
 
@@ -364,26 +364,24 @@ class AppUIFrame(ctk.CTkFrame):
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
             self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
             distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
-            price_text = f"{o.price:.2f}"
 
             btn_station = ctk.CTkButton(
             self.scrollable_frame,
-            text=f"{o.charging_station.name}\n{distance:.2f} km {price_text} €",
+            text=f"{o.charging_station.name}\n{distance:.2f} km {o.price:.2f} €",
             width=200,
             height=80,
             corner_radius=0,
             font=ctk.CTkFont(family="Arial", size=30),
             cursor="none",
-            command=lambda s=o, p=price_text, d=distance: self._on_option_click(s, p, d)
+            command=lambda s=o: self._on_option_click(s)
             )
             btn_station.pack(pady=10)
 
 
-    def _on_option_click(self, option: Option, price_text: str, distance: float):
+    def _on_option_click(self, option: Option):
         ConfirmationDialog(
             self,
             option,
-            price_text,
-            distance,
+            self._gps_controller.get_position(),
             on_confirm=lambda: self._controller.select_station(option)
         )

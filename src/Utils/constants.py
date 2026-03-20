@@ -7,7 +7,7 @@ class ServiceType(StrEnum):
     MOTEL = '\uf236'
     MECHANIC = '\uf0ad'
     SUPERMARKET = '\uf07a'
-    ATM = '\uf3e7'
+    ATM = '\uf09d'
     PHARMACY = '\uf484'
 
 class Destinations(Enum):
