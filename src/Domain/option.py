@@ -1,17 +1,14 @@
 from datetime import datetime
 
 from src.Domain.charging_station import ChargingStation
-from src.Domain.price_rate import PriceRate
-from src.Domain.charger_type import ChargerType
 
 from src.Utils.constants import ServiceType
 
 class Option:
-    def __init__(self, request_id: int, charging_station: ChargingStation, price_rate: PriceRate, charger_type: ChargerType, start_time: datetime, end_time: datetime, services_nearby: list[ServiceType]):
+    def __init__(self, request_id: int, charging_station: ChargingStation, price: float, start_time: datetime, end_time: datetime, services_nearby: list[ServiceType]):
         self._request_id = request_id
         self._charging_station = charging_station
-        self._price_rate = price_rate
-        self._charger_type = charger_type
+        self._price = price
         self._start_time = start_time
         self._end_time = end_time
         self._duration_hours = (end_time - start_time).total_seconds() / 3600
@@ -22,8 +19,6 @@ class Option:
     @staticmethod
     def from_dict(data: dict):
         charging_station_data = data["charging_station"]
-        price_rate_data = data["price_rate"]
-        charger_type_data = data["charger_type"]
         services_nearby_data = data["services_nearby"]
 
         charging_station = ChargingStation(
@@ -33,26 +28,13 @@ class Option:
             operator=charging_station_data["operator"]
         )
 
-        price_rate = PriceRate(
-            id=price_rate_data["id"],
-            price_per_kwh=price_rate_data["price_per_kwh"]
-        )
-
-        charger_type = ChargerType(
-            id=charger_type_data["id"],
-            name=charger_type_data["name"],
-            kw_speed=90,
-            description="charger_type_data["
-        )
-
         return Option(
             request_id=data["request_id"],
             charging_station=charging_station,
-            price_rate=price_rate,
-            charger_type=charger_type,
+            price=data["price"],
             start_time=datetime.fromisoformat(data["start_time"]),
             end_time=datetime.fromisoformat(data["end_time"]),
-            services_nearby=[ServiceType[service] for service in services_nearby_data]
+            services_nearby=[ServiceType[service.upper()] for service in services_nearby_data]
         )
 
     ##############
@@ -67,12 +49,8 @@ class Option:
         return self._charging_station
 
     @property
-    def price_rate(self) -> PriceRate:
-        return self._price_rate
-
-    @property
-    def charger_type(self) -> ChargerType:
-        return self._charger_type
+    def price(self) -> float:
+        return self._price
 
     @property
     def start_time(self) -> datetime:

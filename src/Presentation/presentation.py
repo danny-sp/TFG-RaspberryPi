@@ -7,8 +7,6 @@ import tkinter as tk
 
 from src.Presentation.emergent import ConfirmationDialog
 
-from src.Domain.controller import Controller
-
 from src.Domain.control_position import ControlPosition
 from src.Domain.control_requests import ControlRequests
 from src.Domain.control_route import ControlRoute
@@ -330,7 +328,6 @@ class AppUIFrame(ctk.CTkFrame):
         # Remove all markers except the car
         self._reset_state()
 
-        # options = Controller.get_stations()
         dest_coords = Destinations[self._destination].value if self._destination in Destinations.__members__ else None
 
         options = ControlRequests.make_request(self._position, dest_coords)
