@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
+"""
+NMEA generator script that creates NMEA sentences from a route defined by a start and end point.
+"""
 
-import datetime
-import polyline
-import requests
 import argparse
+import datetime
 import sys
+
+import polyline
+import requests  # type: ignore
 
 
 def to_nmea_coord(degree, is_lat):
@@ -13,11 +17,12 @@ def to_nmea_coord(degree, is_lat):
     m = (abs(degree) - d) * 60.0
     direction = ""
     if is_lat:
-        direction = 'N' if degree > 0 else 'S'
+        direction = "N" if degree > 0 else "S"
         return f"{d:02d}{m:07.4f},{direction}"
     else:
-        direction = 'E' if degree > 0 else 'W'
+        direction = "E" if degree > 0 else "W"
         return f"{d:03d}{m:07.4f},{direction}"
+
 
 def calculate_checksum(sentence):
     """Calculate the required NMEA XOR checksum."""
@@ -26,7 +31,18 @@ def calculate_checksum(sentence):
         calc_cksum ^= ord(s)
     return f"{calc_cksum:02X}"
 
+
 def get_route_geometry(start_coords, end_coords):
+    """
+    Fetches the route geometry from the current coordinates to the specified destination coordinates.
+
+    Args:
+        start_coords (Tuple[float, float]): The current GPS coordinates (latitude, longitude).
+        end_coords (Tuple[float, float]): The destination GPS coordinates (latitude, longitude).
+
+    Returns:
+        Tuple[List[Tuple[float, float]], float, float]: A tuple containing the list of coordinates, distance, and duration.
+    """
     url = f"http://server:5000/route/v1/driving/{start_coords[1]},{start_coords[0]};{end_coords[1]},{end_coords[0]}?overview=full"
     try:
         response = requests.get(url, timeout=5)
@@ -35,9 +51,9 @@ def get_route_geometry(start_coords, end_coords):
         if data["code"] != "Ok":
             return None
 
-        encoded_geometry = data['routes'][0]['geometry']
-        distance = data['routes'][0]['distance']
-        duration = data['routes'][0]['duration']
+        encoded_geometry = data["routes"][0]["geometry"]
+        distance = data["routes"][0]["distance"]
+        duration = data["routes"][0]["duration"]
         return polyline.decode(encoded_geometry), distance, duration
 
     except requests.RequestException as e:
@@ -45,7 +61,9 @@ def get_route_geometry(start_coords, end_coords):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="NMEA generator from a route (uses a local routing server)")
+    parser = argparse.ArgumentParser(
+        description="NMEA generator from a route (uses a local routing server)"
+    )
 
     parser.add_argument(
         "--cinit",
@@ -60,10 +78,18 @@ if __name__ == "__main__":
     )
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--cend", nargs=2, type=float, metavar=("LAT","LON"),
-                       help="Destination coordinates: LAT LON")
-    group.add_argument("--cityend", choices=["BILBAO", "MADRID"],
-                       help="Destination by city (BILBAO or MADRID)")
+    group.add_argument(
+        "--cend",
+        nargs=2,
+        type=float,
+        metavar=("LAT", "LON"),
+        help="Destination coordinates: LAT LON",
+    )
+    group.add_argument(
+        "--cityend",
+        choices=["BILBAO", "MADRID"],
+        help="Destination by city (BILBAO or MADRID)",
+    )
 
     args = parser.parse_args()
 

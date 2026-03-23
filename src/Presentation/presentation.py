@@ -1,26 +1,32 @@
-import customtkinter as ctk
-from tkintermapview import TkinterMapView
-import time
+"""
+Main application frame that contains the map, controls, and handles user interactions.
+"""
+
 import math
 import os
+import time
 import tkinter as tk
 
-from src.Presentation.emergent import ConfirmationDialog
+import customtkinter as ctk  # type: ignore
+from tkintermapview import TkinterMapView  # type: ignore
 
 from src.Domain.control_position import ControlPosition
 from src.Domain.control_requests import ControlRequests
 from src.Domain.control_route import ControlRoute
-
 from src.Domain.option import Option
-
+from src.Presentation.emergent import ConfirmationDialog
 from src.Utils.constants import Destinations
-
 from src.Utils.logger import setup_logger
 
 MAX_ZOOM_LEVEL = 17
 MIN_ZOOM_LEVEL = 5
 
+
 class TouchMapView(TkinterMapView):
+    """
+    Custom MapView for tactile screens interaction.
+    """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_mouse_down_position = None
@@ -28,6 +34,9 @@ class TouchMapView(TkinterMapView):
         self._moved = False
 
     def mouse_move(self, event):
+        """
+        Override mouse move to detect if the user is dragging the map or just tapping.
+        """
         if self.last_mouse_down_position is None:
             self.last_mouse_down_position = (event.x, event.y)
             self.last_mouse_down_time = time.time()
@@ -35,7 +44,7 @@ class TouchMapView(TkinterMapView):
 
         dx = event.x - self.last_mouse_down_position[0]
         dy = event.y - self.last_mouse_down_position[1]
-        distance = math.sqrt(dx*dx + dy*dy)
+        distance = math.sqrt(dx * dx + dy * dy)
 
         if distance > 50:
             self.last_mouse_down_position = (event.x, event.y)
@@ -52,8 +61,15 @@ class TouchMapView(TkinterMapView):
     def moved(self, value):
         self._moved = value
 
+
 class AppUIFrame(ctk.CTkFrame):
-    def __init__(self, parent, controller: ControlPosition, destination: str, gps_thread):
+    """
+    Main application frame that contains the map, controls, and handles user interactions.
+    """
+
+    def __init__(
+        self, parent, controller: ControlPosition, destination: str, gps_thread
+    ):
         super().__init__(parent)
         self._logger = setup_logger("AppUIFrame")
         self._logger.info(f"Initializing AppUIFrame with destination: {destination}")
@@ -77,7 +93,9 @@ class AppUIFrame(ctk.CTkFrame):
             except Exception as e:
                 self._logger.error(f"Failed to load car icon: {e}")
         else:
-            self._logger.warning("Car icon not found at assets/car.png - using default marker")
+            self._logger.warning(
+                "Car icon not found at assets/car.png - using default marker"
+            )
 
         self.grid_columnconfigure(0, weight=3)
         self.grid_columnconfigure(1, weight=1)
@@ -88,7 +106,13 @@ class AppUIFrame(ctk.CTkFrame):
         self._setup_map()
         self._setup_route()
         self._setup_controls()
-        self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
+        self._car_marker = self._map_widget.set_marker(
+            self._position[0],
+            self._position[1],
+            text=None,
+            icon=self._car_icon,
+            icon_anchor="center",
+        )
 
         self._map_widget.set_position(self._position[0], self._position[1])
         self._auto = True
@@ -96,15 +120,16 @@ class AppUIFrame(ctk.CTkFrame):
 
         self._update()
 
-
-##############################################################
-##
-## MAIN UI SETUP METHODS: TOP BAR, MAP, ROUTE, CONTROLS
-##
-##############################################################
+    ##############################################################
+    ##
+    ## MAIN UI SETUP METHODS: TOP BAR, MAP, ROUTE, CONTROLS
+    ##
+    ##############################################################
 
     def _setup_top_bar(self):
-        self._top_bar = ctk.CTkFrame(self, fg_color="#2a2a2a", height=50, corner_radius=0)
+        self._top_bar = ctk.CTkFrame(
+            self, fg_color="#2a2a2a", height=50, corner_radius=0
+        )
         self._top_bar.grid(row=0, column=0, columnspan=2, sticky="ew")
         self._top_bar.grid_propagate(False)
         self._top_bar.configure(cursor="none")
@@ -120,7 +145,7 @@ class AppUIFrame(ctk.CTkFrame):
             fg_color="red",
             hover_color="red",
             command=self.close_app,
-            cursor="none"
+            cursor="none",
         )
         self._btn_close.pack(side="left")
 
@@ -129,7 +154,7 @@ class AppUIFrame(ctk.CTkFrame):
             self._top_bar,
             text="GPS",
             font=ctk.CTkFont(family="Arial", size=25, weight="bold"),
-            text_color="red"
+            text_color="red",
         )
         self._lbl_gps.pack(side="top", pady=0)
         self._lbl_gps.place(relx=0.5, rely=0.5, anchor="center")
@@ -139,12 +164,14 @@ class AppUIFrame(ctk.CTkFrame):
             self._top_bar,
             text="",
             font=ctk.CTkFont(family="Arial", size=25, weight="bold"),
-            text_color="white"
+            text_color="white",
         )
         self._lbl_clock.pack(side="right", padx=20)
 
     def _setup_map(self):
-        self._map_widget = TouchMapView(self, corner_radius=0, database_path="offline_map.db")
+        self._map_widget = TouchMapView(
+            self, corner_radius=0, database_path="offline_map.db"
+        )
         self._map_widget.grid(row=1, column=0, sticky="nsew")
         self._map_widget.configure(cursor="none")
 
@@ -152,12 +179,20 @@ class AppUIFrame(ctk.CTkFrame):
 
         try:
             if hasattr(self._map_widget, "button_zoom_in"):
-                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_in.canvas_rect, state='hidden')
-                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_in.canvas_text, state='hidden')
+                self._map_widget.canvas.itemconfig(
+                    self._map_widget.button_zoom_in.canvas_rect, state="hidden"
+                )
+                self._map_widget.canvas.itemconfig(
+                    self._map_widget.button_zoom_in.canvas_text, state="hidden"
+                )
 
             if hasattr(self._map_widget, "button_zoom_out"):
-                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_out.canvas_rect, state='hidden')
-                self._map_widget.canvas.itemconfig(self._map_widget.button_zoom_out.canvas_text, state='hidden')
+                self._map_widget.canvas.itemconfig(
+                    self._map_widget.button_zoom_out.canvas_rect, state="hidden"
+                )
+                self._map_widget.canvas.itemconfig(
+                    self._map_widget.button_zoom_out.canvas_text, state="hidden"
+                )
 
             # Zoom In Button
             self._btn_zoom_in = ctk.CTkButton(
@@ -170,7 +205,7 @@ class AppUIFrame(ctk.CTkFrame):
                 fg_color="gray",
                 hover_color="gray",
                 command=self._map_zoom_in,
-                cursor="none"
+                cursor="none",
             )
             self._btn_zoom_in.place(relx=0.03, rely=0.14, anchor="w")
 
@@ -185,7 +220,7 @@ class AppUIFrame(ctk.CTkFrame):
                 fg_color="gray",
                 hover_color="gray",
                 command=self._map_zoom_out,
-                cursor="none"
+                cursor="none",
             )
             self._btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
 
@@ -199,7 +234,7 @@ class AppUIFrame(ctk.CTkFrame):
                 fg_color="gray",
                 hover_color="gray",
                 command=self._map_center,
-                cursor="none"
+                cursor="none",
             )
             self._btn_center.place(relx=0.37, rely=0.14, anchor="w")
 
@@ -211,14 +246,16 @@ class AppUIFrame(ctk.CTkFrame):
             self._logger.info(f"Fetching route for destination: {self._destination}")
             response = ControlRoute.get_route_str(self._position, self._destination)
             if response is not None:
-                route, distance, duration = response
+                route, _, _ = response
                 self._map_widget.set_path(route)
 
         elif isinstance(self._destination, tuple) and len(self._destination) == 2:
-            self._logger.info(f"Fetching route for custom coordinates: {self._destination}")
+            self._logger.info(
+                f"Fetching route for custom coordinates: {self._destination}"
+            )
             response = ControlRoute.get_route_coords(self._position, self._destination)
             if response is not None:
-                route, distance, duration = response
+                route, _, _ = response
                 self._map_widget.set_path(route)
 
     def _setup_controls(self):
@@ -237,19 +274,23 @@ class AppUIFrame(ctk.CTkFrame):
             height=50,
             corner_radius=0,
             font=ctk.CTkFont(family="Arial", size=30),
-            cursor="none"
+            cursor="none",
         )
         self.btn_action.pack(side="top", pady=20)
 
         # Container for dynamic content
-        self.content_container = ctk.CTkFrame(self.frame_controls, fg_color="transparent")
-        self.content_container.pack(side="top", fill="both", expand=True, padx=10, pady=10)
+        self.content_container = ctk.CTkFrame(
+            self.frame_controls, fg_color="transparent"
+        )
+        self.content_container.pack(
+            side="top", fill="both", expand=True, padx=10, pady=10
+        )
 
-##############################################################
-##
-## AUXILIAR METHODS: CLOSE_APP, SET CAR MARKER, RESET_STATE, ZOOM, UPDATE GPS/CLK
-##
-##############################################################
+    ##############################################################
+    ##
+    ## AUXILIAR METHODS: CLOSE_APP, SET CAR MARKER, RESET_STATE, ZOOM, UPDATE GPS/CLK
+    ##
+    ##############################################################
 
     def close_app(self):
         """Safely closes the application"""
@@ -263,10 +304,16 @@ class AppUIFrame(ctk.CTkFrame):
 
     def _reset_state(self):
         self._map_widget.delete_all_marker()
-        self._car_marker = self._map_widget.set_marker(self._position[0], self._position[1], text=None, icon=self._car_icon, icon_anchor="center")
+        self._car_marker = self._map_widget.set_marker(
+            self._position[0],
+            self._position[1],
+            text=None,
+            icon=self._car_icon,
+            icon_anchor="center",
+        )
 
         # Remove old scroller
-        if hasattr(self, 'scrollable_frame') and self.scrollable_frame is not None:
+        if hasattr(self, "scrollable_frame") and self.scrollable_frame is not None:
             try:
                 self.scrollable_frame.pack_forget()
                 self.scrollable_frame.destroy()
@@ -317,18 +364,21 @@ class AppUIFrame(ctk.CTkFrame):
 
         self.after(1000, self._update)
 
-
-##############################################################
-##
-## BUTTONs CLICK HANDLERS
-##
-##############################################################
+    ##############################################################
+    ##
+    ## BUTTONs CLICK HANDLERS
+    ##
+    ##############################################################
 
     def _on_button_click(self):
         # Remove all markers except the car
         self._reset_state()
 
-        dest_coords = Destinations[self._destination].value if self._destination in Destinations.__members__ else None
+        dest_coords = (
+            Destinations[self._destination].value
+            if self._destination in Destinations.__members__
+            else None
+        )
 
         options = ControlRequests.make_request(self._position, dest_coords)
         if not options:
@@ -337,9 +387,7 @@ class AppUIFrame(ctk.CTkFrame):
 
         # Create a scrollable frame for station buttons
         self.scrollable_frame = ctk.CTkScrollableFrame(
-            self.content_container,
-            corner_radius=0,
-            fg_color="transparent"
+            self.content_container, corner_radius=0, fg_color="transparent"
         )
 
         self.scrollable_frame.pack(fill="both", expand=True)
@@ -353,7 +401,7 @@ class AppUIFrame(ctk.CTkFrame):
             cursor="none",
             command=self._reset_state,
             fg_color="red",
-            hover_color="red"
+            hover_color="red",
         )
         btn_cancel.pack(pady=10)
 
@@ -363,22 +411,21 @@ class AppUIFrame(ctk.CTkFrame):
             distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
 
             btn_station = ctk.CTkButton(
-            self.scrollable_frame,
-            text=f"{o.charging_station.name}\n{distance:.2f} km {o.price:.2f} €",
-            width=200,
-            height=80,
-            corner_radius=0,
-            font=ctk.CTkFont(family="Arial", size=30),
-            cursor="none",
-            command=lambda s=o: self._on_option_click(s)
+                self.scrollable_frame,
+                text=f"{o.charging_station.name}\n{distance:.2f} km {o.price:.2f} €",
+                width=200,
+                height=80,
+                corner_radius=0,
+                font=ctk.CTkFont(family="Arial", size=30),
+                cursor="none",
+                command=lambda s=o: self._on_option_click(s),
             )
             btn_station.pack(pady=10)
-
 
     def _on_option_click(self, option: Option):
         ConfirmationDialog(
             self,
             option,
             self._gps_controller.get_position(),
-            on_confirm=lambda: self._controller.select_station(option)
+            on_confirm=lambda: self._controller.select_station(option),
         )

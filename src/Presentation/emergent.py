@@ -1,16 +1,25 @@
-import customtkinter as ctk
+"""
+Custom confirmation dialog for user interactions.
+"""
+
 import os
-from PIL import Image
 from typing import Tuple
 
-from src.Domain.control_route import ControlRoute
+import customtkinter as ctk  # type: ignore
+from PIL import Image
 
+from src.Domain.control_route import ControlRoute
 from src.Domain.option import Option
 
-from src.Utils.constants import ServiceType
 
 class ConfirmationDialog:
-    def __init__(self, parent, option: Option, position: Tuple[float, float], on_confirm=None):
+    """ "
+    Custom confirmation dialog that displays information about a selected charging station option and asks the user to confirm their choice.
+    """
+
+    def __init__(
+        self, parent, option: Option, position: Tuple[float, float], on_confirm=None
+    ):
         """
         Create a custom confirmation dialog.
 
@@ -23,9 +32,18 @@ class ConfirmationDialog:
         """
         self.on_confirm = on_confirm
         self._price_text = f"{option.price:.2f}"
-        self._distance = ControlRoute.get_distance_coords(position, option.charging_station.location)
+        self._distance = ControlRoute.get_distance_coords(
+            position, option.charging_station.location
+        )
 
-        operators = ["Electromaps", "Endesa", "Etecnic", "Iberdrola", "Mercadona", "Repsol"]
+        operators = [
+            "Electromaps",
+            "Endesa",
+            "Etecnic",
+            "Iberdrola",
+            "Mercadona",
+            "Repsol",
+        ]
         operator_name = option.charging_station.operator
         if operator_name in operators:
             logo_path = f"./assets/operators/{operator_name}.png"
@@ -49,10 +67,7 @@ class ConfirmationDialog:
 
         # Main frame with black border
         main_frame = ctk.CTkFrame(
-            self.dialog,
-            corner_radius=0,
-            border_width=3,
-            border_color="black"
+            self.dialog, corner_radius=0, border_width=3, border_color="black"
         )
         main_frame.pack(fill="both", expand=True)
 
@@ -70,7 +85,9 @@ class ConfirmationDialog:
         logo_image = None
         if logo_path and os.path.exists(logo_path):
             image = Image.open(logo_path)
-            logo_image = ctk.CTkImage(light_image=image, dark_image=image, size=(70, 70))
+            logo_image = ctk.CTkImage(
+                light_image=image, dark_image=image, size=(70, 70)
+            )
         self._logo_image = logo_image
 
         # Message label
@@ -80,7 +97,7 @@ class ConfirmationDialog:
             font=ctk.CTkFont(family="Arial", size=40),
             wraplength=540,
             image=self._logo_image,
-            compound="left"
+            compound="left",
         )
         label.pack(pady=5)
 
@@ -88,14 +105,14 @@ class ConfirmationDialog:
         info_lbl = ctk.CTkLabel(
             main_frame,
             text=info_text,
-            font=ctk.CTkFont(family="Font Awesome 6 Free Solid", size=30)
+            font=ctk.CTkFont(family="Font Awesome 6 Free Solid", size=30),
         )
         info_lbl.pack(pady=5)
 
         services_lbl = ctk.CTkLabel(
             main_frame,
             text=f"{services_str}",
-            font=ctk.CTkFont(family="Font Awesome 6 Free Solid", size=30)
+            font=ctk.CTkFont(family="Font Awesome 6 Free Solid", size=30),
         )
         services_lbl.pack(pady=10)
 
@@ -114,7 +131,7 @@ class ConfirmationDialog:
             cursor="none",
             fg_color="green",
             hover_color="darkgreen",
-            command=self._on_yes
+            command=self._on_yes,
         )
         btn_yes.pack(side="left", padx=10)
 
@@ -129,7 +146,7 @@ class ConfirmationDialog:
             cursor="none",
             fg_color="red",
             hover_color="darkred",
-            command=self._on_no
+            command=self._on_no,
         )
         btn_no.pack(side="left", padx=10)
 
@@ -142,7 +159,7 @@ class ConfirmationDialog:
         self.dialog.destroy()
         if self.on_confirm:
             self.on_confirm()
-    
+
     def _on_no(self):
         """Handle No button click"""
         self.dialog.destroy()

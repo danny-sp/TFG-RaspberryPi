@@ -12,4 +12,27 @@ dependencies = [
     "geopy>=2.4.1",
     "polyline>=2.0.4",
     "dotenv>=0.9.9",
+    "types-requests>=2.32.4.20260107",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.3.1",
+    "isort>=8.0.1",
+    "mypy>=1.19.1",
+    "pylint>=4.0.5",
+    "ruff>=0.15.7",
+]
+
+[tool.mypy]
+python_version = "3.11"
+mypy_path = ["$MYPY_CONFIG_FILE_DIR"]
+namespace_packages = true
+explicit_package_bases = true
+
+[tool.pylint.messages_control]
+disable = [
+    "logging-fstring-interpolation",
+    "too-few-public-methods",
+    "line-too-long",
 ]

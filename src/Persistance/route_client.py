@@ -1,13 +1,33 @@
-import requests
+"""
+Retreives route geometry, distance, and duration from the OSRM server
+for given start and end coordinates.
+"""
+
 import polyline
+import requests
 
 from src.Utils.logger import setup_logger
 
+
 class RouteClient:
+    """Client for interacting with the OSRM routing server."""
+
     _logger = setup_logger("RouteClient")
 
     @classmethod
     def get_route_geometry(cls, start_coords, end_coords):
+        """
+        Retrieves route geometry, distance, and duration from the OSRM server.
+
+        Args:
+            start_coords (tuple): Tuple of (latitude, longitude) for the start point.
+            end_coords (tuple): Tuple of (latitude, longitude) for the end point.
+
+        Returns:
+            tuple: A tuple containing the decoded route geometry (list of (lat, lng) tuples),
+                   the distance (float), and the duration (float).
+        """
+
         url = f"http://server:5000/route/v1/driving/{start_coords[1]},{start_coords[0]};{end_coords[1]},{end_coords[0]}?overview=full"
         try:
             response = requests.get(url, timeout=5)
@@ -17,9 +37,9 @@ class RouteClient:
                 cls._logger.error(f"Error with OSRM: {data['code']}")
                 return None
 
-            encoded_geometry = data['routes'][0]['geometry']
-            distance = data['routes'][0]['distance']
-            duration = data['routes'][0]['duration']
+            encoded_geometry = data["routes"][0]["geometry"]
+            distance = data["routes"][0]["distance"]
+            duration = data["routes"][0]["duration"]
             return polyline.decode(encoded_geometry), distance, duration
 
         except requests.RequestException as e:

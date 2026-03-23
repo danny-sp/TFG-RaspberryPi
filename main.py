@@ -1,19 +1,28 @@
-import customtkinter as ctk
-from dotenv import load_dotenv
-load_dotenv()
-import tkinter as tk
-import os
+"""
+Main entry point for the EV charging station application. Initializes the GUI and starts the GPS polling thread.
+"""
 
-from src.Presentation.presentation import AppUIFrame
-from src.Presentation.welcome import WelcomeFrame
+import tkinter as tk
+
+import customtkinter as ctk  # type: ignore
+from dotenv import load_dotenv
 
 from src.Domain.control_position import ControlPosition
-
 from src.Persistance.gps_client import GpsPoll
-
+from src.Presentation.presentation import AppUIFrame
+from src.Presentation.welcome import WelcomeFrame
 from src.Utils.logger import setup_logger
 
+load_dotenv()
+
+
 def on_welcome_select(destination: str):
+    """
+    Handles the selection of a destination from the welcome screen and initializes the main application frame.
+
+    Args:
+        destination (str): The selected destination ("BILBAO", "MADRID", "NONE", or "EXIT").
+    """
     global logger, welcome_frame, root, gps_controller, gps_thread
     if destination == "EXIT":
         logger.info("EXIT selected — stopping.")
@@ -45,10 +54,12 @@ if __name__ == "__main__":
     gps_controller = ControlPosition(gps_client=gps_thread)
 
     selected_dest = tk.StringVar(root, value="")
+
     def _on_selected_var(*args):
         dest = selected_dest.get()
         if dest:
             on_welcome_select(dest)
+
     selected_dest.trace_add("write", _on_selected_var)
 
     welcome_frame = WelcomeFrame(root, selected_var=selected_dest)

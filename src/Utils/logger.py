@@ -1,7 +1,12 @@
+"""
+Logger setup for the application. Configures logging to both console and file with a specific format.
+"""
+
 import logging
 import os
 import sys
 from datetime import datetime
+
 
 def setup_logger(name: str) -> logging.Logger:
     """
@@ -21,7 +26,9 @@ def setup_logger(name: str) -> logging.Logger:
 
     # Create formatters
     # Format: [Time] [Logger Name] [Line] [Level]: Message
-    log_format = logging.Formatter('%(asctime)s - %(name)s - %(lineno)d - %(levelname)s: %(message)s')
+    log_format = logging.Formatter(
+        "%(asctime)s - %(name)s - %(lineno)d - %(levelname)s: %(message)s"
+    )
 
     # Create console handler
     c_handler = logging.StreamHandler(sys.stdout)
@@ -29,13 +36,15 @@ def setup_logger(name: str) -> logging.Logger:
     c_handler.setFormatter(log_format)
 
     # Create logs directory if it doesn't exist
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'logs')
+    log_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "logs"
+    )
     os.makedirs(log_dir, exist_ok=True)
 
     # Create file handler with timestamp in filename
-    timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    log_file = os.path.join(log_dir, f'{timestamp}.log')
-    f_handler = logging.FileHandler(log_file, encoding='utf-8')
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    log_file = os.path.join(log_dir, f"{timestamp}.log")
+    f_handler = logging.FileHandler(log_file, encoding="utf-8")
     f_handler.setLevel(log_level)
     f_handler.setFormatter(log_format)
 

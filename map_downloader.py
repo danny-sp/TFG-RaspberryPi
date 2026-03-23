@@ -1,5 +1,8 @@
-import tkintermapview
-import os
+"""
+Map downloader script for offline use.
+"""
+
+import tkintermapview  # type: ignore
 
 db_filename = "offline_map.db"
 
@@ -14,9 +17,6 @@ zoom_max = 14
 print(f"Starting download to {db_filename}...")
 
 # Run the download
-loader.save_offline_tiles(top_left_position,
-                          bottom_right_position,
-                          zoom_min,
-                          zoom_max)
+loader.save_offline_tiles(top_left_position, bottom_right_position, zoom_min, zoom_max)
 
 print("Download completed.")
