@@ -1,95 +1,79 @@
 """
 Represents a charging request from an electric vehicle.
+Following Pydantic's BaseModel.
 """
+
+from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Tuple
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
 
 
-class Request:
+class Request(BaseModel):
     """
     Represents a charging request from an electric vehicle.
 
     Attributes:
-        uuid (str): The unique identifier of the request.
+        uuid (str): Unique identifier for the request, typically a UUID string.
         plate (str): The license plate of the vehicle making the request.
-        timestamp (datetime): The timestamp when the request was created.
-        current_percent (float): The current battery percentage of the vehicle.
-        position (tuple[float, float]): The current geographical position of the vehicle (latitude, longitude).
-        destination (tuple[float, float]): The geographical destination of the vehicle (latitude,
+        timestamp (datetime): The exact time when the request was generated.
+        current_percent (float): The current battery percentage of the vehicle (0 to 100).
+        position (tuple[float, float]): The current GPS coordinates of the vehicle (latitude, longitude).
+        destination (tuple[float, float]): The GPS coordinates of the desired destination (latitude, longitude).
     """
 
-    def __init__(
-        self,
-        plate: str,
-        current_percent: float,
-        position: Tuple[float, float],
-        destination: Tuple[float, float],
-    ):
-        self._uuid = str(uuid.uuid4())
-        self._plate = plate
-        self._timestamp = datetime.now()
-        self._current_percent = current_percent
-        self._position = position
-        self._destination = destination
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
-    def to_dict(self):
+    uuid: str = Field(
+        default_factory=lambda: str(uuid.uuid4()),
+        description="Unique identifier for the request",
+    )
+    plate: str = Field(..., min_length=1, description="Vehicle license plate")
+    timestamp: datetime = Field(
+        default_factory=datetime.now, description="Exact time the request was generated"
+    )
+    current_percent: float = Field(
+        ..., ge=0.0, le=100.0, description="Current battery percentage (0 to 100)"
+    )
+    position: tuple[float, float] = Field(
+        ..., description="Current GPS coordinates (lat, lon)"
+    )
+    destination: tuple[float, float] = Field(
+        ..., description="Destination GPS coordinates (lat, lon)"
+    )
+
+    def to_dict(self) -> dict[str, Any]:
         """
-        Converts the Request object to a dictionary representation.
+        Serializes the Request into a flattened dictionary format.
         """
         return {
-            "uuid": self._uuid,
-            "plate": self._plate,
-            "timestamp": self._timestamp.isoformat(),
-            "current_percent": self._current_percent,
-            "latitude": self._position[0],
-            "longitude": self._position[1],
-            "destination_lat": self._destination[0],
-            "destination_lon": self._destination[1],
+            "uuid": self.uuid,
+            "plate": self.plate,
+            "timestamp": self.timestamp.isoformat(),
+            "current_percent": self.current_percent,
+            "latitude": self.position[0],
+            "longitude": self.position[1],
+            "destination_lat": self.destination[0],
+            "destination_lon": self.destination[1],
         }
 
-    ##############
-    # PROPERTIES #
-    ##############
-    @property
-    def uuid(self) -> str:
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Request:
         """
-        The unique identifier of the request.
+        Factory method to instantiate a Request from a flattened dictionary.
         """
-        return self._uuid
-
-    @property
-    def plate(self) -> str:
-        """
-        The license plate of the vehicle making the request.
-        """
-        return self._plate
-
-    @property
-    def timestamp(self) -> datetime:
-        """
-        The timestamp when the request was created.
-        """
-        return self._timestamp
-
-    @property
-    def current_percent(self) -> float:
-        """
-        The current battery percentage of the vehicle.
-        """
-        return self._current_percent
-
-    @property
-    def position(self) -> Tuple[float, float]:
-        """
-        The current geographical position of the vehicle (latitude, longitude).
-        """
-        return self._position
-
-    @property
-    def destination(self) -> Tuple[float, float]:
-        """
-        The geographical destination of the vehicle (latitude, longitude).
-        """
-        return self._destination
+        return cls(
+            uuid=data.get("uuid", str(uuid.uuid4())),
+            plate=data["plate"],
+            timestamp=(
+                datetime.fromisoformat(data["timestamp"])
+                if "timestamp" in data
+                else datetime.now()
+            ),
+            current_percent=data["current_percent"],
+            position=(data["latitude"], data["longitude"]),
+            destination=(data["destination_lat"], data["destination_lon"]),
+        )

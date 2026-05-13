@@ -57,7 +57,9 @@ class MqttService:
         """
         cls._received_message = None
         cls._message_event.clear()
-        cls._logger.info(f"Waiting for response on topic 'response/{cls._plate}' with timeout of {timeout} seconds...")
+        cls._logger.info(
+            f"Waiting for response on topic 'response/{cls._plate}' with timeout of {timeout} seconds..."
+        )
         cls._client.subscribe(f"response/{cls._plate}", qos=1)
         cls._client.on_message = cls.on_message
         cls._client.loop_start()

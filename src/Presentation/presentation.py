@@ -224,6 +224,7 @@ class AppUIFrame(ctk.CTkFrame):
             )
             self._btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
 
+            # Center Button
             self._btn_center = ctk.CTkButton(
                 self._map_widget,
                 text="\uf601",
@@ -238,10 +239,28 @@ class AppUIFrame(ctk.CTkFrame):
             )
             self._btn_center.place(relx=0.37, rely=0.14, anchor="w")
 
+            # Reroute Button
+            self._btn_reroute = ctk.CTkButton(
+                self._map_widget,
+                text="\uf021",
+                width=80,
+                height=80,
+                corner_radius=0,
+                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
+                fg_color="gray",
+                hover_color="gray",
+                command=self._setup_route,
+                cursor="none",
+            )
+            self._btn_reroute.place(relx=0.54, rely=0.14, anchor="w")
+
         except Exception as e:
             self._logger.warning(f"Using default zoom buttons due to error: {e}")
 
     def _setup_route(self):
+        # Remove existing route if any
+        self._map_widget.delete_all_path()
+
         if isinstance(self._destination, str) and self._destination != "NONE":
             self._logger.info(f"Fetching route for destination: {self._destination}")
             response = ControlRoute.get_route_str(self._position, self._destination)

@@ -13,7 +13,7 @@ from src.Domain.option import Option
 
 
 class ConfirmationDialog:
-    """ "
+    """
     Custom confirmation dialog that displays information about a selected charging station option and asks the user to confirm their choice.
     """
 
@@ -77,7 +77,7 @@ class ConfirmationDialog:
             services.add(service)
 
         services_str = " ".join(services)
-        duration = option.duration_hours * 3600
+        duration = option.charging_hours * 3600
         h, r = divmod(duration, 3600)
         m, _ = divmod(r, 60)
 

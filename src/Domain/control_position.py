@@ -19,7 +19,7 @@ class ControlPosition:
 
     def get_position(self) -> Tuple[float, float]:
         """Returns the current GPS position as a tuple of (latitude, longitude). If GPS data is not available, returns a default position."""
-        default_pos = (39.54505007110555, -4.328554881757664)  # Default position
+        default_pos = (0.0, 0.0)  # Default position
         data = self.gps_client.get_data() if self.gps_client else None
         if data:
             latitude = data.get(
