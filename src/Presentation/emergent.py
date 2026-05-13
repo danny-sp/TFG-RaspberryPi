@@ -163,3 +163,81 @@ class ConfirmationDialog:
     def _on_no(self):
         """Handle No button click"""
         self.dialog.destroy()
+
+
+class StopConfirmationDialog:
+    """
+    Custom confirmation dialog to ask the user if they want to stop going to the charging station.
+    """
+
+    def __init__(self, parent, on_confirm=None):
+        self.on_confirm = on_confirm
+
+        self.dialog = ctk.CTkToplevel(parent)
+        self.dialog.title("Confirmation")
+        self.dialog.geometry("530x230")
+        self.dialog.resizable(False, False)
+        self.dialog.attributes("-topmost", True)
+        self.dialog.overrideredirect(True)
+        self.dialog.configure(cursor="none")
+
+        self.dialog.update_idletasks()
+        x = (self.dialog.winfo_screenwidth() // 2) - (530 // 2)
+        y = (self.dialog.winfo_screenheight() // 2) - (230 // 2)
+        self.dialog.geometry(f"530x230+{x}+{y}")
+
+        main_frame = ctk.CTkFrame(
+            self.dialog, corner_radius=0, border_width=3, border_color="black"
+        )
+        main_frame.pack(fill="both", expand=True)
+
+        label = ctk.CTkLabel(
+            main_frame,
+            text="Are you sure you want to stop going to charging station?",
+            font=ctk.CTkFont(family="Arial", size=35),
+            wraplength=540,
+        )
+        label.pack(pady=40)
+
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(pady=10)
+
+        btn_yes = ctk.CTkButton(
+            button_frame,
+            text="Yes",
+            width=190,
+            height=80,
+            corner_radius=8,
+            font=ctk.CTkFont(size=22),
+            cursor="none",
+            fg_color="green",
+            hover_color="darkgreen",
+            command=self._on_yes,
+        )
+        btn_yes.pack(side="left", padx=10)
+
+        btn_no = ctk.CTkButton(
+            button_frame,
+            text="No",
+            width=190,
+            height=80,
+            corner_radius=8,
+            font=ctk.CTkFont(size=22),
+            cursor="none",
+            fg_color="red",
+            hover_color="darkred",
+            command=self._on_no,
+        )
+        btn_no.pack(side="left", padx=10)
+
+        self.dialog.transient(parent)
+        self.dialog.grab_set()
+
+    def _on_yes(self):
+        self.dialog.destroy()
+        if self.on_confirm:
+            self.on_confirm()
+
+    def _on_no(self):
+        self.dialog.destroy()
+

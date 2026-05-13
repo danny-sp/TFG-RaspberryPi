@@ -4,6 +4,7 @@ Main application frame that contains the map, controls, and handles user interac
 
 import math
 import os
+import threading
 import time
 import tkinter as tk
 
@@ -14,7 +15,7 @@ from src.Domain.control_position import ControlPosition
 from src.Domain.control_requests import ControlRequests
 from src.Domain.control_route import ControlRoute
 from src.Domain.option import Option
-from src.Presentation.emergent import ConfirmationDialog
+from src.Presentation.emergent import ConfirmationDialog, StopConfirmationDialog
 from src.Utils.constants import Destinations
 from src.Utils.logger import setup_logger
 
@@ -78,6 +79,7 @@ class AppUIFrame(ctk.CTkFrame):
         self._position = self._gps_controller.get_position()
         self._gps_thread = gps_thread
         self._destination = destination
+        self._going_to_station = False
 
         self._car_icon = None
         TARGET_CAR_ICON_SIZE = 50
@@ -259,6 +261,10 @@ class AppUIFrame(ctk.CTkFrame):
 
     def _setup_route(self):
         # Remove existing route if any
+        if self._going_to_station:
+            StopConfirmationDialog(self, on_confirm=self._stop_station_navigation)
+            return
+
         self._map_widget.delete_all_path()
 
         if isinstance(self._destination, str) and self._destination != "NONE":
@@ -390,6 +396,10 @@ class AppUIFrame(ctk.CTkFrame):
     ##############################################################
 
     def _on_button_click(self):
+        if self._going_to_station:
+            StopConfirmationDialog(self, on_confirm=self._stop_station_navigation)
+            return
+
         # Remove all markers except the car
         self._reset_state()
 
@@ -399,7 +409,26 @@ class AppUIFrame(ctk.CTkFrame):
             else None
         )
 
-        options = ControlRequests.make_request(self._position, dest_coords)
+        self.btn_action.configure(state="disabled", text="Waiting...")
+
+        # Start a thread so the UI is not blocked while waiting for MQTT response
+        threading.Thread(
+            target=self._fetch_options_thread, args=(self._position, dest_coords), daemon=True
+        ).start()
+
+    def _stop_station_navigation(self):
+        self._going_to_station = False
+        self._reset_state()
+        self._setup_route()
+
+    def _fetch_options_thread(self, position, dest_coords):
+        options = ControlRequests.make_request(position, dest_coords)
+        # Process options on the main thread
+        self.after(0, self._process_options, options)
+
+    def _process_options(self, options):
+        self.btn_action.configure(state="normal", text="Stop")
+
         if not options:
             self._logger.warning("No options received for the request")
             return
@@ -424,9 +453,14 @@ class AppUIFrame(ctk.CTkFrame):
         )
         btn_cancel.pack(pady=10)
 
-        for o in options:
+        for idx, o in enumerate(options):
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
-            self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
+            
+            if idx == 0:
+                self._map_widget.set_marker(lat, lon, text=o.charging_station.name, marker_color_outside="#FFD700")
+            else:
+                self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
+            
             distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
 
             btn_station = ctk.CTkButton(
@@ -439,6 +473,10 @@ class AppUIFrame(ctk.CTkFrame):
                 cursor="none",
                 command=lambda s=o: self._on_option_click(s),
             )
+            
+            if idx == 0:
+                btn_station.configure(fg_color="#FFD700", hover_color="#CCAC00", text_color="black")
+
             btn_station.pack(pady=10)
 
     def _on_option_click(self, option: Option):
@@ -446,5 +484,35 @@ class AppUIFrame(ctk.CTkFrame):
             self,
             option,
             self._gps_controller.get_position(),
-            on_confirm=lambda: self._controller.select_station(option),
+            on_confirm=lambda: self._option_selected(option),
         )
+
+    def _option_selected(self, option: Option):
+        self._reset_state()
+        self._map_widget.delete_all_path()
+        self.btn_action.configure(state="normal", text="Stop")
+        self._going_to_station = True
+
+        station_coords = (option.charging_station.latitude, option.charging_station.longitude)
+
+        # Route 1: Current position to Station (Red)
+        self._logger.info(f"Fetching route to station: {station_coords}")
+        resp1 = ControlRoute.get_route_coords(self._position, station_coords)
+        if resp1 is not None:
+            route1, _, _ = resp1
+            self._map_widget.set_path(route1, color="red")
+
+        # Route 2: Station to Destination (Green)
+        self._logger.info(f"Fetching route from station to destination: {self._destination}")
+        if isinstance(self._destination, str) and self._destination != "NONE":
+            resp2 = ControlRoute.get_route_str(station_coords, self._destination)
+            if resp2 is not None:
+                route2, _, _ = resp2
+                self._map_widget.set_path(route2, color="green")
+        elif isinstance(self._destination, tuple) and len(self._destination) == 2:
+            resp2 = ControlRoute.get_route_coords(station_coords, self._destination)
+            if resp2 is not None:
+                route2, _, _ = resp2
+                self._map_widget.set_path(route2, color="green")
+                
+        self._map_widget.set_marker(station_coords[0], station_coords[1], text=option.charging_station.name, marker_color_outside="#FFD700")
