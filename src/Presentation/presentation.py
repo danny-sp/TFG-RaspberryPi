@@ -437,7 +437,7 @@ class AppUIFrame(ctk.CTkFrame):
         self.scrollable_frame = ctk.CTkScrollableFrame(
             self.content_container, corner_radius=0, fg_color="transparent"
         )
-
+        self.scrollable_frame._scrollbar.configure(width=40)
         self.scrollable_frame.pack(fill="both", expand=True)
         btn_cancel = ctk.CTkButton(
             self.scrollable_frame,
@@ -455,7 +455,7 @@ class AppUIFrame(ctk.CTkFrame):
 
         for idx, o in enumerate(options):
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
-            
+
             if idx == 0:
                 self._map_widget.set_marker(lat, lon, text=o.charging_station.name, marker_color_outside="#FFD700")
             else:
@@ -463,21 +463,26 @@ class AppUIFrame(ctk.CTkFrame):
             
             distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
 
+            display_name = o.charging_station.name
+            if len(display_name) > 12:
+                display_name = display_name[:15] + "..."
+
             btn_station = ctk.CTkButton(
                 self.scrollable_frame,
-                text=f"{o.charging_station.name}\n{distance:.2f} km {o.price:.2f} €",
+                text=f"{display_name}\n{distance:.2f} km {o.price:.2f} €",
                 width=200,
                 height=80,
                 corner_radius=0,
                 font=ctk.CTkFont(family="Arial", size=30),
                 cursor="none",
                 command=lambda s=o: self._on_option_click(s),
+                anchor="w",
             )
             
             if idx == 0:
                 btn_station.configure(fg_color="#FFD700", hover_color="#CCAC00", text_color="black")
 
-            btn_station.pack(pady=10)
+            btn_station.pack(pady=10, fill="x", padx=10)
 
     def _on_option_click(self, option: Option):
         ConfirmationDialog(
