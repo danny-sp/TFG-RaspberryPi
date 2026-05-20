@@ -32,11 +32,9 @@ class ControlRoute:
 
         start_coords = coords
 
-        if destination == "BILBAO":
-            end_coords = (43.262873, -2.947564)
-        elif destination == "MADRID":
-            end_coords = (40.451843, -3.686502)
-        else:
+        try:
+            end_coords = Destinations[destination].value
+        except KeyError:
             cls._logger.warning(f"Unknown destination '{destination}' requested")
             return None
 

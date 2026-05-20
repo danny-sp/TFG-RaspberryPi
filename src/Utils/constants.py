@@ -26,6 +26,7 @@ class Destinations(Enum):
 
     MADRID = (40.451843, -3.686502)
     BILBAO = (43.262873, -2.947564)
+    VALENCIA = (39.473950, -0.357382)
 
 
 class BookingStatus(StrEnum):

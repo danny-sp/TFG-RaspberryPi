@@ -519,5 +519,5 @@ class AppUIFrame(ctk.CTkFrame):
             if resp2 is not None:
                 route2, _, _ = resp2
                 self._map_widget.set_path(route2, color="green")
-                
+
         self._map_widget.set_marker(station_coords[0], station_coords[1], text=option.charging_station.name, marker_color_outside="#FFD700")

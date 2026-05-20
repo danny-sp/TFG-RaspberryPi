@@ -240,4 +240,3 @@ class StopConfirmationDialog:
 
     def _on_no(self):
         self.dialog.destroy()
-

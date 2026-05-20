@@ -73,17 +73,17 @@ class WelcomeFrame(ctk.CTkFrame):
         )
         self.btn_madrid.grid(row=0, column=1, sticky="nsew")
 
-        self.btn_none = ctk.CTkButton(
+        self.btn_valencia = ctk.CTkButton(
             self,
-            text="NONE",
+            text="VALENCIA",
             fg_color="#0078D7",
             hover_color="#0078D7",
             border_color="#ffffff",
-            command=lambda: self._select("NONE"),
+            command=lambda: self._select("VALENCIA"),
             **btn_style,
             cursor="none",
         )
-        self.btn_none.grid(row=1, column=0, sticky="nsew")
+        self.btn_valencia.grid(row=1, column=0, sticky="nsew")
 
         self.btn_exit = ctk.CTkButton(
             self,
@@ -113,7 +113,12 @@ class WelcomeFrame(ctk.CTkFrame):
                 pass
 
         try:
-            for w in (self.btn_bilbao, self.btn_madrid, self.btn_none, self.btn_exit):
+            for w in (
+                self.btn_bilbao,
+                self.btn_madrid,
+                self.btn_valencia,
+                self.btn_exit,
+            ):
                 try:
                     w.configure(state="disabled")
                 except Exception:
