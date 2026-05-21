@@ -4,7 +4,7 @@ Manages the control of the vehicle's position using GPS data for the EV charging
 
 from typing import Tuple
 
-from src.Persistance.gps_client import GpsPoll
+from src.Persistence.gps_client import GpsPoll
 from src.Utils.logger import setup_logger
 
 

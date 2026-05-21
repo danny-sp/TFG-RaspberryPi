@@ -9,7 +9,7 @@ from typing import Tuple
 
 from src.Domain.option import Option
 from src.Domain.request import Request
-from src.Persistance.mqtt_client import MqttService
+from src.Persistence.mqtt_client import MqttService
 from src.Utils.logger import setup_logger
 
 

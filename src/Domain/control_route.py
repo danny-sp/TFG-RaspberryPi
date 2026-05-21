@@ -6,7 +6,7 @@ from typing import Tuple
 
 from geopy.distance import geodesic  # type: ignore
 
-from src.Persistance.route_client import RouteClient
+from src.Persistence.route_client import RouteClient
 from src.Utils.constants import Destinations
 from src.Utils.logger import setup_logger
 

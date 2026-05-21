@@ -8,7 +8,7 @@ import customtkinter as ctk  # type: ignore
 from dotenv import load_dotenv
 
 from src.Domain.control_position import ControlPosition
-from src.Persistance.gps_client import GpsPoll
+from src.Persistence.gps_client import GpsPoll
 from src.Presentation.presentation import AppUIFrame
 from src.Presentation.welcome import WelcomeFrame
 from src.Utils.logger import setup_logger
