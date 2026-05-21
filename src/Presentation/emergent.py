@@ -80,7 +80,7 @@ class ConfirmationDialog:
         duration = option.charging_hours * 3600
         h, r = divmod(duration, 3600)
         m, _ = divmod(r, 60)
-        
+
         eta = option.start_time.strftime("%H:%M")
 
         text = f"{option.charging_station.name} selected!"

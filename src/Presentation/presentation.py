@@ -366,7 +366,10 @@ class AppUIFrame(ctk.CTkFrame):
             self.station_info_frame = None
 
         # Remove destination info
-        if hasattr(self, "destination_info_frame") and self.destination_info_frame is not None:
+        if (
+            hasattr(self, "destination_info_frame")
+            and self.destination_info_frame is not None
+        ):
             try:
                 self.destination_info_frame.pack_forget()
                 self.destination_info_frame.destroy()
@@ -441,7 +444,9 @@ class AppUIFrame(ctk.CTkFrame):
 
         # Start a thread so the UI is not blocked while waiting for MQTT response
         threading.Thread(
-            target=self._fetch_options_thread, args=(self._position, dest_coords), daemon=True
+            target=self._fetch_options_thread,
+            args=(self._position, dest_coords),
+            daemon=True,
         ).start()
 
     def _stop_station_navigation(self):
@@ -485,10 +490,15 @@ class AppUIFrame(ctk.CTkFrame):
             lat, lon = o.charging_station.latitude, o.charging_station.longitude
 
             if idx == 0:
-                self._map_widget.set_marker(lat, lon, text=o.charging_station.name, marker_color_outside="#FFD700")
+                self._map_widget.set_marker(
+                    lat,
+                    lon,
+                    text=o.charging_station.name,
+                    marker_color_outside="#FFD700",
+                )
             else:
                 self._map_widget.set_marker(lat, lon, text=o.charging_station.name)
-            
+
             distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
 
             display_name = o.charging_station.name
@@ -506,9 +516,11 @@ class AppUIFrame(ctk.CTkFrame):
                 command=lambda s=o: self._on_option_click(s),
                 anchor="w",
             )
-            
+
             if idx == 0:
-                btn_station.configure(fg_color="#FFD700", hover_color="#CCAC00", text_color="black")
+                btn_station.configure(
+                    fg_color="#FFD700", hover_color="#CCAC00", text_color="black"
+                )
 
             btn_station.pack(pady=10, fill="x", padx=10)
 
@@ -528,7 +540,10 @@ class AppUIFrame(ctk.CTkFrame):
 
         self._show_station_info(option)
 
-        station_coords = (option.charging_station.latitude, option.charging_station.longitude)
+        station_coords = (
+            option.charging_station.latitude,
+            option.charging_station.longitude,
+        )
 
         # Route 1: Current position to Station (Red)
         self._logger.info(f"Fetching route to station: {station_coords}")
@@ -538,7 +553,9 @@ class AppUIFrame(ctk.CTkFrame):
             self._map_widget.set_path(route1, color="red")
 
         # Route 2: Station to Destination (Green)
-        self._logger.info(f"Fetching route from station to destination: {self._destination}")
+        self._logger.info(
+            f"Fetching route from station to destination: {self._destination}"
+        )
         duration2 = 0
         if isinstance(self._destination, str) and self._destination != "NONE":
             resp2 = ControlRoute.get_route_str(station_coords, self._destination)
@@ -552,18 +569,33 @@ class AppUIFrame(ctk.CTkFrame):
                 self._map_widget.set_path(route2, color="green")
 
         # Calculate ETA to destination (after charging)
-        eta_dest = option.start_time + timedelta(hours=option.charging_hours, seconds=duration2)
-        dest_name = self._destination if isinstance(self._destination, str) else "Custom"
+        eta_dest = option.start_time + timedelta(
+            hours=option.charging_hours, seconds=duration2
+        )
+        dest_name = (
+            self._destination if isinstance(self._destination, str) else "Custom"
+        )
         if self._destination != "NONE":
             self._show_destination_info(dest_name, eta_dest.strftime("%H:%M"))
 
-        self._map_widget.set_marker(station_coords[0], station_coords[1], text=option.charging_station.name, marker_color_outside="#FFD700")
+        self._map_widget.set_marker(
+            station_coords[0],
+            station_coords[1],
+            text=option.charging_station.name,
+            marker_color_outside="#FFD700",
+        )
 
     def _create_icon_text(self, parent, icon, text):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        lbl_icon = ctk.CTkLabel(frame, text=icon, font=ctk.CTkFont(family="Font Awesome 6 Free", size=20, weight="bold"))
+        lbl_icon = ctk.CTkLabel(
+            frame,
+            text=icon,
+            font=ctk.CTkFont(family="Font Awesome 6 Free", size=20, weight="bold"),
+        )
         lbl_icon.pack(side="left", padx=(0, 5))
-        lbl_text = ctk.CTkLabel(frame, text=text, font=ctk.CTkFont(family="Arial", size=20))
+        lbl_text = ctk.CTkLabel(
+            frame, text=text, font=ctk.CTkFont(family="Arial", size=20)
+        )
         lbl_text.pack(side="left")
         return frame
 
@@ -578,7 +610,7 @@ class AppUIFrame(ctk.CTkFrame):
         name_lbl = ctk.CTkLabel(
             self.station_info_frame,
             text=display_name,
-            font=ctk.CTkFont(family="Arial", size=24, weight="bold")
+            font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
         )
         name_lbl.pack(pady=(10, 5))
 
@@ -600,22 +632,31 @@ class AppUIFrame(ctk.CTkFrame):
         f_charge.grid(row=0, column=1, pady=5, sticky="w", padx=10)
 
         # Price (fa-euro-sign)
-        f_price = self._create_icon_text(details_frame, "\uf153", f"{option.price:.2f} €")
+        f_price = self._create_icon_text(
+            details_frame, "\uf153", f"{option.price:.2f} €"
+        )
         f_price.grid(row=1, column=0, pady=5, sticky="w", padx=10)
 
         # Power (fa-bolt)
-        f_power = self._create_icon_text(details_frame, "\uf0e7", f"{option.kw_speed} kW")
+        f_power = self._create_icon_text(
+            details_frame, "\uf0e7", f"{option.kw_speed} kW"
+        )
         f_power.grid(row=1, column=1, pady=5, sticky="w", padx=10)
 
     def _show_destination_info(self, name, eta_str):
-        if hasattr(self, "destination_info_frame") and self.destination_info_frame is not None:
+        if (
+            hasattr(self, "destination_info_frame")
+            and self.destination_info_frame is not None
+        ):
             try:
                 self.destination_info_frame.pack_forget()
                 self.destination_info_frame.destroy()
             except:
                 pass
 
-        self.destination_info_frame = ctk.CTkFrame(self.content_container, corner_radius=10)
+        self.destination_info_frame = ctk.CTkFrame(
+            self.content_container, corner_radius=10
+        )
         self.destination_info_frame.pack(fill="x", padx=10, pady=10)
 
         display_name = f"Dest: {name}"
@@ -625,11 +666,13 @@ class AppUIFrame(ctk.CTkFrame):
         name_lbl = ctk.CTkLabel(
             self.destination_info_frame,
             text=display_name,
-            font=ctk.CTkFont(family="Arial", size=24, weight="bold")
+            font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
         )
         name_lbl.pack(pady=(10, 5))
 
-        details_frame = ctk.CTkFrame(self.destination_info_frame, fg_color="transparent")
+        details_frame = ctk.CTkFrame(
+            self.destination_info_frame, fg_color="transparent"
+        )
         details_frame.pack(fill="x", padx=10, pady=(0, 10))
 
         # ETA to destination (fa-flag-checkered)
