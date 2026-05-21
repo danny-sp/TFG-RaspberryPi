@@ -53,7 +53,7 @@ class ConfirmationDialog:
         # Create custom confirmation dialog
         self.dialog = ctk.CTkToplevel(parent)
         self.dialog.title("Confirmation")
-        self.dialog.geometry("570x270")
+        self.dialog.geometry("700x270")
         self.dialog.resizable(False, False)
         self.dialog.attributes("-topmost", True)
         self.dialog.overrideredirect(True)
@@ -61,9 +61,9 @@ class ConfirmationDialog:
 
         # Center the dialog
         self.dialog.update_idletasks()
-        x = (self.dialog.winfo_screenwidth() // 2) - (570 // 2)
+        x = (self.dialog.winfo_screenwidth() // 2) - (700 // 2)
         y = (self.dialog.winfo_screenheight() // 2) - (270 // 2)
-        self.dialog.geometry(f"570x270+{x}+{y}")
+        self.dialog.geometry(f"700x270+{x}+{y}")
 
         # Main frame with black border
         main_frame = ctk.CTkFrame(
@@ -80,6 +80,8 @@ class ConfirmationDialog:
         duration = option.charging_hours * 3600
         h, r = divmod(duration, 3600)
         m, _ = divmod(r, 60)
+        
+        eta = option.start_time.strftime("%H:%M")
 
         text = f"{option.charging_station.name} selected!"
         logo_image = None
@@ -101,7 +103,7 @@ class ConfirmationDialog:
         )
         label.pack(pady=5)
 
-        info_text = f"\uf017 {h:.0f}h {m}m \uf153 {self._price_text} \uf4d7 {self._distance:.1f}km"
+        info_text = f"ETA {eta} \uf017 {h:.0f}h {m}m \uf153 {self._price_text} \uf4d7 {self._distance:.1f}km"
         info_lbl = ctk.CTkLabel(
             main_frame,
             text=info_text,

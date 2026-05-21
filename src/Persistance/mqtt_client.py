@@ -15,7 +15,7 @@ class MqttService:
     Service class to handle MQTT communication for publishing requests and receiving responses.
     """
 
-    _server = os.getenv("MQTT_BROKER_HOST", "server")
+    _server = os.getenv("MQTT_BROKER_HOST", "espetero.duckdns.org")
     _port = int(os.getenv("MQTT_BROKER_PORT", "1883"))
 
     _client = mqtt.Client()
@@ -45,7 +45,7 @@ class MqttService:
         cls._client.publish(cls._requests_topic, request_json, qos=1)
 
     @classmethod
-    def get_response(cls, timeout=30) -> str | None:
+    def get_response(cls, timeout=60) -> str | None:
         """
         Wait for a response message on the topic 'response/{plate}' and return its payload.
 

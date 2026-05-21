@@ -7,6 +7,7 @@ import os
 import threading
 import time
 import tkinter as tk
+from datetime import datetime, timedelta
 
 import customtkinter as ctk  # type: ignore
 from tkintermapview import TkinterMapView  # type: ignore
@@ -99,15 +100,15 @@ class AppUIFrame(ctk.CTkFrame):
                 "Car icon not found at assets/car.png - using default marker"
             )
 
-        self.grid_columnconfigure(0, weight=3)
+        self.grid_columnconfigure(0, weight=2)
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
 
         self._setup_top_bar()
         self._setup_map()
-        self._setup_route()
         self._setup_controls()
+        self._setup_route()
         self._car_marker = self._map_widget.set_marker(
             self._position[0],
             self._position[1],
@@ -209,7 +210,7 @@ class AppUIFrame(ctk.CTkFrame):
                 command=self._map_zoom_in,
                 cursor="none",
             )
-            self._btn_zoom_in.place(relx=0.03, rely=0.14, anchor="w")
+            self._btn_zoom_in.place(x=20, rely=0.14, anchor="w")
 
             # Zoom Out Button
             self._btn_zoom_out = ctk.CTkButton(
@@ -224,7 +225,7 @@ class AppUIFrame(ctk.CTkFrame):
                 command=self._map_zoom_out,
                 cursor="none",
             )
-            self._btn_zoom_out.place(relx=0.20, rely=0.14, anchor="w")
+            self._btn_zoom_out.place(x=110, rely=0.14, anchor="w")
 
             # Center Button
             self._btn_center = ctk.CTkButton(
@@ -239,7 +240,7 @@ class AppUIFrame(ctk.CTkFrame):
                 command=self._map_center,
                 cursor="none",
             )
-            self._btn_center.place(relx=0.37, rely=0.14, anchor="w")
+            self._btn_center.place(x=200, rely=0.14, anchor="w")
 
             # Reroute Button
             self._btn_reroute = ctk.CTkButton(
@@ -254,7 +255,7 @@ class AppUIFrame(ctk.CTkFrame):
                 command=self._setup_route,
                 cursor="none",
             )
-            self._btn_reroute.place(relx=0.54, rely=0.14, anchor="w")
+            self._btn_reroute.place(x=290, rely=0.14, anchor="w")
 
         except Exception as e:
             self._logger.warning(f"Using default zoom buttons due to error: {e}")
@@ -266,13 +267,17 @@ class AppUIFrame(ctk.CTkFrame):
             return
 
         self._map_widget.delete_all_path()
+        self._reset_state()
 
         if isinstance(self._destination, str) and self._destination != "NONE":
             self._logger.info(f"Fetching route for destination: {self._destination}")
             response = ControlRoute.get_route_str(self._position, self._destination)
             if response is not None:
-                route, _, _ = response
+                route, _, duration = response
                 self._map_widget.set_path(route)
+
+                eta = datetime.now() + timedelta(seconds=duration)
+                self._show_destination_info(self._destination, eta.strftime("%H:%M"))
 
         elif isinstance(self._destination, tuple) and len(self._destination) == 2:
             self._logger.info(
@@ -280,13 +285,18 @@ class AppUIFrame(ctk.CTkFrame):
             )
             response = ControlRoute.get_route_coords(self._position, self._destination)
             if response is not None:
-                route, _, _ = response
+                route, _, duration = response
                 self._map_widget.set_path(route)
+
+                eta = datetime.now() + timedelta(seconds=duration)
+                self._show_destination_info("Custom", eta.strftime("%H:%M"))
 
     def _setup_controls(self):
         self.frame_controls = ctk.CTkFrame(self, corner_radius=0)
         self.frame_controls.grid(row=1, column=1, sticky="nsew")
         self.frame_controls.configure(cursor="none")
+        self.frame_controls.grid_propagate(False)
+        self.frame_controls.pack_propagate(False)
 
         # Stop button - fixed at the top
         self.btn_action = ctk.CTkButton(
@@ -345,6 +355,24 @@ class AppUIFrame(ctk.CTkFrame):
             except:
                 pass
             self.scrollable_frame = None
+
+        # Remove station info
+        if hasattr(self, "station_info_frame") and self.station_info_frame is not None:
+            try:
+                self.station_info_frame.pack_forget()
+                self.station_info_frame.destroy()
+            except:
+                pass
+            self.station_info_frame = None
+
+        # Remove destination info
+        if hasattr(self, "destination_info_frame") and self.destination_info_frame is not None:
+            try:
+                self.destination_info_frame.pack_forget()
+                self.destination_info_frame.destroy()
+            except:
+                pass
+            self.destination_info_frame = None
 
     def _map_zoom_in(self):
         if self._map_widget.zoom < MAX_ZOOM_LEVEL:
@@ -464,8 +492,8 @@ class AppUIFrame(ctk.CTkFrame):
             distance = ControlRoute.get_distance_coords(self._position, (lat, lon))
 
             display_name = o.charging_station.name
-            if len(display_name) > 12:
-                display_name = display_name[:15] + "..."
+            if len(display_name) > 13:
+                display_name = display_name[:13] + "..."
 
             btn_station = ctk.CTkButton(
                 self.scrollable_frame,
@@ -498,6 +526,8 @@ class AppUIFrame(ctk.CTkFrame):
         self.btn_action.configure(state="normal", text="Stop")
         self._going_to_station = True
 
+        self._show_station_info(option)
+
         station_coords = (option.charging_station.latitude, option.charging_station.longitude)
 
         # Route 1: Current position to Station (Red)
@@ -509,15 +539,99 @@ class AppUIFrame(ctk.CTkFrame):
 
         # Route 2: Station to Destination (Green)
         self._logger.info(f"Fetching route from station to destination: {self._destination}")
+        duration2 = 0
         if isinstance(self._destination, str) and self._destination != "NONE":
             resp2 = ControlRoute.get_route_str(station_coords, self._destination)
             if resp2 is not None:
-                route2, _, _ = resp2
+                route2, _, duration2 = resp2
                 self._map_widget.set_path(route2, color="green")
         elif isinstance(self._destination, tuple) and len(self._destination) == 2:
             resp2 = ControlRoute.get_route_coords(station_coords, self._destination)
             if resp2 is not None:
-                route2, _, _ = resp2
+                route2, _, duration2 = resp2
                 self._map_widget.set_path(route2, color="green")
 
+        # Calculate ETA to destination (after charging)
+        eta_dest = option.start_time + timedelta(hours=option.charging_hours, seconds=duration2)
+        dest_name = self._destination if isinstance(self._destination, str) else "Custom"
+        if self._destination != "NONE":
+            self._show_destination_info(dest_name, eta_dest.strftime("%H:%M"))
+
         self._map_widget.set_marker(station_coords[0], station_coords[1], text=option.charging_station.name, marker_color_outside="#FFD700")
+
+    def _create_icon_text(self, parent, icon, text):
+        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        lbl_icon = ctk.CTkLabel(frame, text=icon, font=ctk.CTkFont(family="Font Awesome 6 Free", size=20, weight="bold"))
+        lbl_icon.pack(side="left", padx=(0, 5))
+        lbl_text = ctk.CTkLabel(frame, text=text, font=ctk.CTkFont(family="Arial", size=20))
+        lbl_text.pack(side="left")
+        return frame
+
+    def _show_station_info(self, option: Option):
+        self.station_info_frame = ctk.CTkFrame(self.content_container, corner_radius=10)
+        self.station_info_frame.pack(fill="x", padx=10, pady=10)
+
+        display_name = option.charging_station.name
+        if len(display_name) > 16:
+            display_name = display_name[:15] + "..."
+
+        name_lbl = ctk.CTkLabel(
+            self.station_info_frame,
+            text=display_name,
+            font=ctk.CTkFont(family="Arial", size=24, weight="bold")
+        )
+        name_lbl.pack(pady=(10, 5))
+
+        details_frame = ctk.CTkFrame(self.station_info_frame, fg_color="transparent")
+        details_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        details_frame.grid_columnconfigure(0, weight=1)
+        details_frame.grid_columnconfigure(1, weight=1)
+
+        eta_time = option.start_time.strftime("%H:%M")
+        charge_min = int(option.charging_hours * 60)
+
+        # ETA (fa-road)
+        f_eta = self._create_icon_text(details_frame, "\uf018", eta_time)
+        f_eta.grid(row=0, column=0, pady=5, sticky="w", padx=10)
+
+        # Charging time (fa-battery-full)
+        f_charge = self._create_icon_text(details_frame, "\uf240", f"{charge_min} min")
+        f_charge.grid(row=0, column=1, pady=5, sticky="w", padx=10)
+
+        # Price (fa-euro-sign)
+        f_price = self._create_icon_text(details_frame, "\uf153", f"{option.price:.2f} €")
+        f_price.grid(row=1, column=0, pady=5, sticky="w", padx=10)
+
+        # Power (fa-bolt)
+        f_power = self._create_icon_text(details_frame, "\uf0e7", f"{option.kw_speed} kW")
+        f_power.grid(row=1, column=1, pady=5, sticky="w", padx=10)
+
+    def _show_destination_info(self, name, eta_str):
+        if hasattr(self, "destination_info_frame") and self.destination_info_frame is not None:
+            try:
+                self.destination_info_frame.pack_forget()
+                self.destination_info_frame.destroy()
+            except:
+                pass
+
+        self.destination_info_frame = ctk.CTkFrame(self.content_container, corner_radius=10)
+        self.destination_info_frame.pack(fill="x", padx=10, pady=10)
+
+        display_name = f"Dest: {name}"
+        if len(display_name) > 16:
+            display_name = display_name[:15] + "..."
+
+        name_lbl = ctk.CTkLabel(
+            self.destination_info_frame,
+            text=display_name,
+            font=ctk.CTkFont(family="Arial", size=24, weight="bold")
+        )
+        name_lbl.pack(pady=(10, 5))
+
+        details_frame = ctk.CTkFrame(self.destination_info_frame, fg_color="transparent")
+        details_frame.pack(fill="x", padx=10, pady=(0, 10))
+
+        # ETA to destination (fa-flag-checkered)
+        f_eta = self._create_icon_text(details_frame, "\uf11e", eta_str)
+        f_eta.pack(pady=5, anchor="center")
