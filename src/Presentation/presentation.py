@@ -16,7 +16,8 @@ from src.Domain.control_position import ControlPosition
 from src.Domain.control_requests import ControlRequests
 from src.Domain.control_route import ControlRoute
 from src.Domain.option import Option
-from src.Presentation.emergent import ConfirmationDialog, StopConfirmationDialog
+from src.Presentation.emergent import (ConfirmationDialog,
+                                       StopConfirmationDialog)
 from src.Utils.constants import Destinations
 from src.Utils.logger import setup_logger
 
@@ -109,19 +110,38 @@ class AppUIFrame(ctk.CTkFrame):
         self._setup_map()
         self._setup_controls()
         self._setup_route()
-        self._car_marker = self._map_widget.set_marker(
-            self._position[0],
-            self._position[1],
-            text=None,
-            icon=self._car_icon,
-            icon_anchor="center",
-        )
 
         self._map_widget.set_position(self._position[0], self._position[1])
         self._auto = True
         self._auto_timer = 5
 
         self._update()
+
+    ##############################################################
+    ##
+    ## HELPERS
+    ##
+    ##############################################################
+
+    def _destroy_widget(self, widget_name):
+        """Safely destroys a widget by its attribute name if it exists."""
+        widget = getattr(self, widget_name, None)
+        if widget is not None:
+            widget.pack_forget()
+            widget.destroy()
+            setattr(self, widget_name, None)
+
+    @property
+    def target_name(self) -> str:
+        return self._destination if isinstance(self._destination, str) else "Custom"
+
+    def _get_route_to_destination(self, start_coords):
+        """Fetches the route depending on whether destination is a string or coordinates."""
+        if isinstance(self._destination, str) and self._destination != "NONE":
+            return ControlRoute.get_route_str(start_coords, self._destination)
+        elif isinstance(self._destination, tuple) and len(self._destination) == 2:
+            return ControlRoute.get_route_coords(start_coords, self._destination)
+        return None
 
     ##############################################################
     ##
@@ -171,6 +191,22 @@ class AppUIFrame(ctk.CTkFrame):
         )
         self._lbl_clock.pack(side="right", padx=20)
 
+    def _create_map_button(self, text, x_pos, command):
+        btn = ctk.CTkButton(
+            self._map_widget,
+            text=text,
+            width=80,
+            height=80,
+            corner_radius=0,
+            font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
+            fg_color="gray",
+            hover_color="gray",
+            command=command,
+            cursor="none",
+        )
+        btn.place(x=x_pos, rely=0.14, anchor="w")
+        return btn
+
     def _setup_map(self):
         self._map_widget = TouchMapView(
             self, corner_radius=0, database_path="offline_map.db"
@@ -197,65 +233,15 @@ class AppUIFrame(ctk.CTkFrame):
                     self._map_widget.button_zoom_out.canvas_text, state="hidden"
                 )
 
-            # Zoom In Button
-            self._btn_zoom_in = ctk.CTkButton(
-                self._map_widget,
-                text="\uf067",
-                width=80,
-                height=80,
-                corner_radius=0,
-                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
-                fg_color="gray",
-                hover_color="gray",
-                command=self._map_zoom_in,
-                cursor="none",
+            # Map Controls
+            self._btn_zoom_in = self._create_map_button("\uf067", 20, self._map_zoom_in)
+            self._btn_zoom_out = self._create_map_button(
+                "\uf068", 110, self._map_zoom_out
             )
-            self._btn_zoom_in.place(x=20, rely=0.14, anchor="w")
-
-            # Zoom Out Button
-            self._btn_zoom_out = ctk.CTkButton(
-                self._map_widget,
-                text="\uf068",
-                width=80,
-                height=80,
-                corner_radius=0,
-                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
-                fg_color="gray",
-                hover_color="gray",
-                command=self._map_zoom_out,
-                cursor="none",
+            self._btn_center = self._create_map_button("\uf601", 200, self._map_center)
+            self._btn_reroute = self._create_map_button(
+                "\uf021", 290, self._setup_route
             )
-            self._btn_zoom_out.place(x=110, rely=0.14, anchor="w")
-
-            # Center Button
-            self._btn_center = ctk.CTkButton(
-                self._map_widget,
-                text="\uf601",
-                width=80,
-                height=80,
-                corner_radius=0,
-                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
-                fg_color="gray",
-                hover_color="gray",
-                command=self._map_center,
-                cursor="none",
-            )
-            self._btn_center.place(x=200, rely=0.14, anchor="w")
-
-            # Reroute Button
-            self._btn_reroute = ctk.CTkButton(
-                self._map_widget,
-                text="\uf021",
-                width=80,
-                height=80,
-                corner_radius=0,
-                font=ctk.CTkFont(family="Font Awesome 6 Free", size=40, weight="bold"),
-                fg_color="gray",
-                hover_color="gray",
-                command=self._setup_route,
-                cursor="none",
-            )
-            self._btn_reroute.place(x=290, rely=0.14, anchor="w")
 
         except Exception as e:
             self._logger.warning(f"Using default zoom buttons due to error: {e}")
@@ -269,38 +255,27 @@ class AppUIFrame(ctk.CTkFrame):
         self._map_widget.delete_all_path()
         self._reset_state()
 
-        if isinstance(self._destination, str) and self._destination != "NONE":
-            self._logger.info(f"Fetching route for destination: {self._destination}")
-            response = ControlRoute.get_route_str(self._position, self._destination)
+        if self._destination != "NONE":
+            self._logger.info(f"Fetching route to destination: {self._destination}")
+            response = self._get_route_to_destination(self._position)
+
             if response is not None:
                 route, _, duration = response
                 self._map_widget.set_path(route)
 
                 eta = datetime.now() + timedelta(seconds=duration)
-                self._show_destination_info(self._destination, eta.strftime("%H:%M"))
-
-        elif isinstance(self._destination, tuple) and len(self._destination) == 2:
-            self._logger.info(
-                f"Fetching route for custom coordinates: {self._destination}"
-            )
-            response = ControlRoute.get_route_coords(self._position, self._destination)
-            if response is not None:
-                route, _, duration = response
-                self._map_widget.set_path(route)
-
-                eta = datetime.now() + timedelta(seconds=duration)
-                self._show_destination_info("Custom", eta.strftime("%H:%M"))
+                self._show_destination_info(self.target_name, eta.strftime("%H:%M"))
 
     def _setup_controls(self):
-        self.frame_controls = ctk.CTkFrame(self, corner_radius=0)
-        self.frame_controls.grid(row=1, column=1, sticky="nsew")
-        self.frame_controls.configure(cursor="none")
-        self.frame_controls.grid_propagate(False)
-        self.frame_controls.pack_propagate(False)
+        self._frame_controls = ctk.CTkFrame(self, corner_radius=0)
+        self._frame_controls.grid(row=1, column=1, sticky="nsew")
+        self._frame_controls.configure(cursor="none")
+        self._frame_controls.grid_propagate(False)
+        self._frame_controls.pack_propagate(False)
 
         # Stop button - fixed at the top
-        self.btn_action = ctk.CTkButton(
-            self.frame_controls,
+        self._btn_action = ctk.CTkButton(
+            self._frame_controls,
             text="Stop",
             fg_color="green",
             hover_color="green",
@@ -311,13 +286,13 @@ class AppUIFrame(ctk.CTkFrame):
             font=ctk.CTkFont(family="Arial", size=30),
             cursor="none",
         )
-        self.btn_action.pack(side="top", pady=20)
+        self._btn_action.pack(side="top", pady=20)
 
         # Container for dynamic content
-        self.content_container = ctk.CTkFrame(
-            self.frame_controls, fg_color="transparent"
+        self._content_container = ctk.CTkFrame(
+            self._frame_controls, fg_color="transparent"
         )
-        self.content_container.pack(
+        self._content_container.pack(
             side="top", fill="both", expand=True, padx=10, pady=10
         )
 
@@ -347,35 +322,9 @@ class AppUIFrame(ctk.CTkFrame):
             icon_anchor="center",
         )
 
-        # Remove old scroller
-        if hasattr(self, "scrollable_frame") and self.scrollable_frame is not None:
-            try:
-                self.scrollable_frame.pack_forget()
-                self.scrollable_frame.destroy()
-            except:
-                pass
-            self.scrollable_frame = None
-
-        # Remove station info
-        if hasattr(self, "station_info_frame") and self.station_info_frame is not None:
-            try:
-                self.station_info_frame.pack_forget()
-                self.station_info_frame.destroy()
-            except:
-                pass
-            self.station_info_frame = None
-
-        # Remove destination info
-        if (
-            hasattr(self, "destination_info_frame")
-            and self.destination_info_frame is not None
-        ):
-            try:
-                self.destination_info_frame.pack_forget()
-                self.destination_info_frame.destroy()
-            except:
-                pass
-            self.destination_info_frame = None
+        self._destroy_widget("_scrollable_frame")
+        self._destroy_widget("_station_info_frame")
+        self._destroy_widget("_destination_info_frame")
 
     def _map_zoom_in(self):
         if self._map_widget.zoom < MAX_ZOOM_LEVEL:
@@ -407,7 +356,7 @@ class AppUIFrame(ctk.CTkFrame):
 
         if self._map_widget.moved:
             self._auto = False
-            self._auto_timer = 5
+            self._auto_timer = 10
             self._map_widget.moved = False
 
         if self._auto:
@@ -418,7 +367,7 @@ class AppUIFrame(ctk.CTkFrame):
             else:
                 self._auto = True
 
-        self.after(1000, self._update)
+        self.after(500, self._update)
 
     ##############################################################
     ##
@@ -440,7 +389,7 @@ class AppUIFrame(ctk.CTkFrame):
             else None
         )
 
-        self.btn_action.configure(state="disabled", text="Waiting...")
+        self._btn_action.configure(state="disabled", text="Waiting...")
 
         # Start a thread so the UI is not blocked while waiting for MQTT response
         threading.Thread(
@@ -460,20 +409,20 @@ class AppUIFrame(ctk.CTkFrame):
         self.after(0, self._process_options, options)
 
     def _process_options(self, options):
-        self.btn_action.configure(state="normal", text="Stop")
+        self._btn_action.configure(state="normal", text="Stop")
 
         if not options:
             self._logger.warning("No options received for the request")
             return
 
         # Create a scrollable frame for station buttons
-        self.scrollable_frame = ctk.CTkScrollableFrame(
-            self.content_container, corner_radius=0, fg_color="transparent"
+        self._scrollable_frame = ctk.CTkScrollableFrame(
+            self._content_container, corner_radius=0, fg_color="transparent"
         )
-        self.scrollable_frame._scrollbar.configure(width=40)
-        self.scrollable_frame.pack(fill="both", expand=True)
+        self._scrollable_frame._scrollbar.configure(width=40)
+        self._scrollable_frame.pack(fill="both", expand=True)
         btn_cancel = ctk.CTkButton(
-            self.scrollable_frame,
+            self._scrollable_frame,
             text="Cancel",
             width=200,
             height=40,
@@ -506,7 +455,7 @@ class AppUIFrame(ctk.CTkFrame):
                 display_name = display_name[:13] + "..."
 
             btn_station = ctk.CTkButton(
-                self.scrollable_frame,
+                self._scrollable_frame,
                 text=f"{display_name}\n{distance:.2f} km {o.price:.2f} €",
                 width=200,
                 height=80,
@@ -535,7 +484,7 @@ class AppUIFrame(ctk.CTkFrame):
     def _option_selected(self, option: Option):
         self._reset_state()
         self._map_widget.delete_all_path()
-        self.btn_action.configure(state="normal", text="Stop")
+        self._btn_action.configure(state="normal", text="Stop")
         self._going_to_station = True
 
         self._show_station_info(option)
@@ -557,13 +506,8 @@ class AppUIFrame(ctk.CTkFrame):
             f"Fetching route from station to destination: {self._destination}"
         )
         duration2 = 0
-        if isinstance(self._destination, str) and self._destination != "NONE":
-            resp2 = ControlRoute.get_route_str(station_coords, self._destination)
-            if resp2 is not None:
-                route2, _, duration2 = resp2
-                self._map_widget.set_path(route2, color="green")
-        elif isinstance(self._destination, tuple) and len(self._destination) == 2:
-            resp2 = ControlRoute.get_route_coords(station_coords, self._destination)
+        if self._destination != "NONE":
+            resp2 = self._get_route_to_destination(station_coords)
             if resp2 is not None:
                 route2, _, duration2 = resp2
                 self._map_widget.set_path(route2, color="green")
@@ -572,11 +516,8 @@ class AppUIFrame(ctk.CTkFrame):
         eta_dest = option.start_time + timedelta(
             hours=option.charging_hours, seconds=duration2
         )
-        dest_name = (
-            self._destination if isinstance(self._destination, str) else "Custom"
-        )
         if self._destination != "NONE":
-            self._show_destination_info(dest_name, eta_dest.strftime("%H:%M"))
+            self._show_destination_info(self.target_name, eta_dest.strftime("%H:%M"))
 
         self._map_widget.set_marker(
             station_coords[0],
@@ -600,21 +541,23 @@ class AppUIFrame(ctk.CTkFrame):
         return frame
 
     def _show_station_info(self, option: Option):
-        self.station_info_frame = ctk.CTkFrame(self.content_container, corner_radius=10)
-        self.station_info_frame.pack(fill="x", padx=10, pady=10)
+        self._station_info_frame = ctk.CTkFrame(
+            self._content_container, corner_radius=10
+        )
+        self._station_info_frame.pack(fill="x", padx=10, pady=10)
 
         display_name = option.charging_station.name
         if len(display_name) > 16:
             display_name = display_name[:15] + "..."
 
         name_lbl = ctk.CTkLabel(
-            self.station_info_frame,
+            self._station_info_frame,
             text=display_name,
             font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
         )
         name_lbl.pack(pady=(10, 5))
 
-        details_frame = ctk.CTkFrame(self.station_info_frame, fg_color="transparent")
+        details_frame = ctk.CTkFrame(self._station_info_frame, fg_color="transparent")
         details_frame.pack(fill="x", padx=10, pady=(0, 10))
 
         details_frame.grid_columnconfigure(0, weight=1)
@@ -644,34 +587,26 @@ class AppUIFrame(ctk.CTkFrame):
         f_power.grid(row=1, column=1, pady=5, sticky="w", padx=10)
 
     def _show_destination_info(self, name, eta_str):
-        if (
-            hasattr(self, "destination_info_frame")
-            and self.destination_info_frame is not None
-        ):
-            try:
-                self.destination_info_frame.pack_forget()
-                self.destination_info_frame.destroy()
-            except:
-                pass
+        self._destroy_widget("_destination_info_frame")
 
-        self.destination_info_frame = ctk.CTkFrame(
-            self.content_container, corner_radius=10
+        self._destination_info_frame = ctk.CTkFrame(
+            self._content_container, corner_radius=10
         )
-        self.destination_info_frame.pack(fill="x", padx=10, pady=10)
+        self._destination_info_frame.pack(fill="x", padx=10, pady=10)
 
         display_name = f"Dest: {name}"
         if len(display_name) > 16:
             display_name = display_name[:15] + "..."
 
         name_lbl = ctk.CTkLabel(
-            self.destination_info_frame,
+            self._destination_info_frame,
             text=display_name,
             font=ctk.CTkFont(family="Arial", size=24, weight="bold"),
         )
         name_lbl.pack(pady=(10, 5))
 
         details_frame = ctk.CTkFrame(
-            self.destination_info_frame, fg_color="transparent"
+            self._destination_info_frame, fg_color="transparent"
         )
         details_frame.pack(fill="x", padx=10, pady=(0, 10))
 
