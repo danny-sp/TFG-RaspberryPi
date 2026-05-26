@@ -7,13 +7,13 @@ import tkinter as tk
 import customtkinter as ctk  # type: ignore
 from dotenv import load_dotenv
 
+load_dotenv()
+
 from src.Domain.control_position import ControlPosition
 from src.Persistence.gps_client import GpsPoll
 from src.Presentation.presentation import AppUIFrame
 from src.Presentation.welcome import WelcomeFrame
 from src.Utils.logger import setup_logger
-
-load_dotenv()
 
 
 def on_welcome_select(destination: str):
