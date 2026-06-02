@@ -15,10 +15,13 @@ class MqttService:
     Service class to handle MQTT communication for publishing requests and receiving responses.
     """
 
-    _server = os.getenv("MQTT_BROKER_HOST", "espetero.duckdns.org")
-    _port = int(os.getenv("MQTT_BROKER_PORT", "1883"))
+    _server = os.getenv("MQTT_BROKER_HOST", "tfg-danielschezctro.duckdns.org")
+    _port = int(os.getenv("MQTT_BROKER_PORT", "8883"))
 
     _client = mqtt.Client()
+    _client.tls_set()
+    _client.username_pw_set(os.getenv("MQTT_USER"), os.getenv("MQTT_PASSWORD"))
+
     _client.connect(_server, _port)
 
     _requests_topic = os.getenv("MQTT_REQUESTS_TOPIC", "vehicles/requests")
