@@ -112,6 +112,8 @@ class AppUIFrame(ctk.CTkFrame):
         self._setup_route()
 
         self._map_widget.set_position(self._position[0], self._position[1])
+        self._map_widget.set_tile_server("https://mt0.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga", max_zoom=22)  # google normal
+
         self._auto = True
         self._auto_timer = 5
 
